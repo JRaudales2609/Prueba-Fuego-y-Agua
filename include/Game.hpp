@@ -55,11 +55,6 @@ private:
     sf::Sprite water;
     sf::Sprite mud;
 
-    // Hitboxes ajustadas (solo el área del líquido)
-    sf::FloatRect lavaHitbox;
-    sf::FloatRect waterHitbox;
-    sf::FloatRect mudHitbox;
-
     // Puertas (ahora usando sprites)
     sf::Sprite door1; // Puerta de Fireboy
     sf::Sprite door2; // Puerta de Watergirl
@@ -70,6 +65,16 @@ private:
 
     // Velocidad de movimiento
     float speed;
+
+    // Variables de física
+    float gravity;           // Fuerza de gravedad
+    float jumpForce;         // Fuerza del salto
+    float player1VelocityY;  // Velocidad vertical jugador 1
+    float player2VelocityY;  // Velocidad vertical jugador 2
+    bool player1OnGround;    // ¿Jugador 1 está en el suelo?
+    bool player2OnGround;    // ¿Jugador 2 está en el suelo?
+    bool player1DoubleJumpAvailable;  // ¿Jugador 1 puede hacer doble salto?
+    bool player2DoubleJumpAvailable;  // ¿Jugador 2 puede hacer doble salto?
 
     // Contadores de diamantes recolectados
     int player1Diamonds;
@@ -83,6 +88,7 @@ private:
     void updateAnimation();
     sf::FloatRect getPlayer1Bounds();
     sf::FloatRect getPlayer2Bounds();
+    void resetGame(); // Reiniciar posiciones al cambiar de nivel
 };
 
 #endif // GAME_HPP

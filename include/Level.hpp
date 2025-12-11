@@ -17,6 +17,7 @@ public:
     Level(int levelNumber);
     
     void loadLevel();
+    void changeLevel(int newLevelNumber); // Cambiar a otro nivel
     void render(sf::RenderWindow& window);
     
     // Getters para posiciones iniciales
@@ -40,7 +41,8 @@ private:
     sf::Sprite backgroundSprite;
     
     // Texturas de bloques
-    sf::Texture borderBlockTexture;
+    sf::Texture borderBlockTexture;          // Para suelo y techo (horizontal)
+    sf::Texture borderBlockVerticalTexture;  // Para paredes laterales (vertical)
     sf::Texture platformBlockTexture;
     
     // Bloques del nivel

@@ -13,7 +13,15 @@ int main()
 Game::Game() :
     window(sf::VideoMode(1200, 800), "Fuego y Agua - 2 Jugadores"),
     currentLevel(1),
-    speed(5.0f),
+    speed(7.0f),
+    gravity(0.5f),
+    jumpForce(-9.5f),
+    player1VelocityY(0.0f),
+    player2VelocityY(0.0f),
+    player1OnGround(false),
+    player2OnGround(false),
+    player1DoubleJumpAvailable(false),
+    player2DoubleJumpAvailable(false),
     player1Diamonds(0),
     player2Diamonds(0),
     diamond1Visible(true),
@@ -129,29 +137,23 @@ Game::Game() :
     float scale2 = 50.0f / waterDiamondTexture.getSize().x;
     diamond2.setScale(scale2, scale2);
 
-    // Configurar Lava (usar sprite con textura)
+    // Los obstáculos (lava, agua, lodo) NO se configuran aquí
+    // Se crearán dinámicamente desde las posiciones del nivel
+    // Solo preparar las texturas y escalas
     lava.setTexture(lavaTexture);
-    lava.setPosition(500.0f, 600.0f);
     float lavaScale = 150.0f / lavaTexture.getSize().x;
     lava.setScale(lavaScale, lavaScale);
-    // Hitbox simple: rectángulo directo (X, Y, Ancho, Alto)
-    lavaHitbox = sf::FloatRect(510.0f, 700.0f, 130.0f, 15.0f);
-
-    // Configurar Agua (usar sprite con textura)
+    lava.setOrigin(lavaTexture.getSize().x / 2.0f, lavaTexture.getSize().y / 2.0f);
+    
     water.setTexture(waterTexture);
-    water.setPosition(300.0f, 500.0f);
     float waterScale = 150.0f / waterTexture.getSize().x;
     water.setScale(waterScale, waterScale);
-    // Hitbox simple: rectángulo directo
-    waterHitbox = sf::FloatRect(310.0f, 600.0f, 130.0f, 15.0f);
-
-    // Configurar Lodo (usar sprite con textura)
+    water.setOrigin(waterTexture.getSize().x / 2.0f, waterTexture.getSize().y / 2.0f);
+    
     mud.setTexture(mudTexture);
-    mud.setPosition(700.0f, 500.0f);
     float mudScale = 150.0f / mudTexture.getSize().x;
     mud.setScale(mudScale, mudScale);
-    // Hitbox simple: rectángulo directo
-    mudHitbox = sf::FloatRect(710.0f, 600.0f, 130.0f, 15.0f);
+    mud.setOrigin(mudTexture.getSize().x / 2.0f, mudTexture.getSize().y / 2.0f);
 
     // Puerta 1 - Fuego (usar sprite con textura)
     door1.setTexture(fireDoorTexture);
@@ -188,6 +190,40 @@ void Game::processEvents()
     {
         if (event.type == sf::Event::Closed)
             window.close();
+        
+        // Cambiar de nivel con teclas numéricas
+        if (event.type == sf::Event::KeyPressed) {
+            if (event.key.code == sf::Keyboard::Num1) {
+                currentLevel.changeLevel(1);
+                resetGame();
+            }
+            else if (event.key.code == sf::Keyboard::Num2) {
+                currentLevel.changeLevel(2);
+                resetGame();
+            }
+            // Salto Jugador 1 (W)
+            else if (event.key.code == sf::Keyboard::W) {
+                if (player1OnGround) {
+                    player1VelocityY = jumpForce;
+                    player1OnGround = false;
+                    player1DoubleJumpAvailable = true;
+                } else if (player1DoubleJumpAvailable) {
+                    player1VelocityY = jumpForce;
+                    player1DoubleJumpAvailable = false;
+                }
+            }
+            // Salto Jugador 2 (Up)
+            else if (event.key.code == sf::Keyboard::Up) {
+                if (player2OnGround) {
+                    player2VelocityY = jumpForce;
+                    player2OnGround = false;
+                    player2DoubleJumpAvailable = true;
+                } else if (player2DoubleJumpAvailable) {
+                    player2VelocityY = jumpForce;
+                    player2DoubleJumpAvailable = false;
+                }
+            }
+        }
     }
 }
 
@@ -197,46 +233,88 @@ void Game::update()
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     mouseCoordText.setString("Mouse: X=" + std::to_string(mousePos.x) + " Y=" + std::to_string(mousePos.y));
 
-    // Movimiento Jugador 1 (WASD)
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
-        player1.move(0.0f, -speed);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
-        player1.move(0.0f, speed);
+    // === FÍSICA: Aplicar gravedad ===
+    player1VelocityY += gravity;
+    player2VelocityY += gravity;
+
+    // === MOVIMIENTO HORIZONTAL Jugador 1 (A/D) ===
+    sf::Vector2f player1OldPos = player1.getPosition();
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
         player1.move(-speed, 0.0f);
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
         player1.move(speed, 0.0f);
 
-    // Movimiento Jugador 2 (Flechas)
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-        player2.move(0.0f, -speed);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-        player2.move(0.0f, speed);
+    // Colisión horizontal Jugador 1
+    std::vector<sf::FloatRect> platforms = currentLevel.getPlatforms();
+    for(const auto& platform : platforms) {
+        if (player1.getGlobalBounds().intersects(platform)) {
+            player1.setPosition(player1OldPos);
+            break;
+        }
+    }
+
+    // === MOVIMIENTO VERTICAL Jugador 1 ===
+    player1OldPos = player1.getPosition();
+    player1.move(0.0f, player1VelocityY);
+
+    // Colisión vertical Jugador 1
+    player1OnGround = false;
+    for(const auto& platform : platforms) {
+        if (player1.getGlobalBounds().intersects(platform)) {
+            // Determinar si está cayendo (velocidad positiva = hacia abajo)
+            if (player1VelocityY > 0) {
+                // Está cayendo, colocar sobre la plataforma
+                player1.setPosition(player1OldPos.x, platform.top - player1.getGlobalBounds().height / 2.0f);
+                player1VelocityY = 0.0f;
+                player1OnGround = true;
+                player1DoubleJumpAvailable = false; // Resetear doble salto
+            } else {
+                // Está subiendo, golpeó el techo
+                player1.setPosition(player1OldPos.x, platform.top + platform.height + player1.getGlobalBounds().height / 2.0f);
+                player1VelocityY = 0.0f;
+            }
+            break;
+        }
+    }
+
+    // === MOVIMIENTO HORIZONTAL Jugador 2 (Left/Right) ===
+    sf::Vector2f player2OldPos = player2.getPosition();
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
         player2.move(-speed, 0.0f);
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
         player2.move(speed, 0.0f);
 
-    // Limitar los jugadores dentro de la pantalla
-    // Jugador 1
-    if (player1.getPosition().x < 0)
-        player1.setPosition(0, player1.getPosition().y);
-    if (player1.getPosition().x + 50 > 1200)
-        player1.setPosition(1150, player1.getPosition().y);
-    if (player1.getPosition().y < 0)
-        player1.setPosition(player1.getPosition().x, 0);
-    if (player1.getPosition().y + 50 > 800)
-        player1.setPosition(player1.getPosition().x, 750);
+    // Colisión horizontal Jugador 2
+    for(const auto& platform : platforms) {
+        if (player2.getGlobalBounds().intersects(platform)) {
+            player2.setPosition(player2OldPos);
+            break;
+        }
+    }
 
-    // Jugador 2
-    if (player2.getPosition().x < 0)
-        player2.setPosition(0, player2.getPosition().y);
-    if (player2.getPosition().x + 50 > 1200)
-        player2.setPosition(1150, player2.getPosition().y);
-    if (player2.getPosition().y < 0)
-        player2.setPosition(player2.getPosition().x, 0);
-    if (player2.getPosition().y + 50 > 800)
-        player2.setPosition(player2.getPosition().x, 750);
+    // === MOVIMIENTO VERTICAL Jugador 2 ===
+    player2OldPos = player2.getPosition();
+    player2.move(0.0f, player2VelocityY);
+
+    // Colisión vertical Jugador 2
+    player2OnGround = false;
+    for(const auto& platform : platforms) {
+        if (player2.getGlobalBounds().intersects(platform)) {
+            if (player2VelocityY > 0) {
+                // Está cayendo, colocar sobre la plataforma
+                player2.setPosition(player2OldPos.x, platform.top - player2.getGlobalBounds().height / 2.0f);
+                player2VelocityY = 0.0f;
+                player2OnGround = true;
+                player2DoubleJumpAvailable = false; // Resetear doble salto
+            } else {
+                // Está subiendo, golpeó el techo
+                player2.setPosition(player2OldPos.x, platform.top + platform.height + player2.getGlobalBounds().height / 2.0f);
+                player2VelocityY = 0.0f;
+            }
+            break;
+        }
+    }
+
 
     // Detectar colisiones con los diamantes
     if (diamond1Visible && player1.getGlobalBounds().intersects(diamond1.getGlobalBounds())) {
@@ -258,26 +336,47 @@ void Game::update()
         window.close(); // Watergirl gana
     }
 
-    // Detectar colisiones con la lava (usando hitbox ajustada)
-    if (player1.getGlobalBounds().intersects(lavaHitbox)) {
+    // Detectar colisiones con obstáculos del nivel
+    std::vector<sf::Vector2f> lavaPos = currentLevel.getLavaPositions();
+    std::vector<sf::Vector2f> waterPos = currentLevel.getWaterPositions();
+    std::vector<sf::Vector2f> mudPos = currentLevel.getMudPositions();
+    
+    // Colisiones con lava
+    for(const auto& pos : lavaPos) {
+        float hitWidth = 130.0f;
+        float hitHeight = 30.0f;
+        sf::FloatRect hitbox(pos.x - hitWidth/2.0f, pos.y - hitHeight/2.0f, hitWidth, hitHeight);
+        
+        if (player2.getGlobalBounds().intersects(hitbox)) {
+            player2.setPosition(currentLevel.getPlayer2StartPos());
+        }
         // Fireboy puede pasar por la lava
-    } else if (player2.getGlobalBounds().intersects(lavaHitbox)) {
-        player2.setPosition(1000.0f, 375.0f); // Reiniciar posición de Watergirl
     }
-
-    // Detectar colisiones con el agua (usando hitbox ajustada)
-    if (player2.getGlobalBounds().intersects(waterHitbox)) {
+    
+    // Colisiones con agua
+    for(const auto& pos : waterPos) {
+        float hitWidth = 130.0f;
+        float hitHeight = 30.0f;
+        sf::FloatRect hitbox(pos.x - hitWidth/2.0f, pos.y - hitHeight/2.0f, hitWidth, hitHeight);
+        
+        if (player1.getGlobalBounds().intersects(hitbox)) {
+            player1.setPosition(currentLevel.getPlayer1StartPos());
+        }
         // Watergirl puede pasar por el agua
-    } else if (player1.getGlobalBounds().intersects(waterHitbox)) {
-        player1.setPosition(150.0f, 375.0f); // Reiniciar posición de Fireboy
     }
-
-    // Detectar colisiones con el lodo verde (usando hitbox ajustada)
-    if (player1.getGlobalBounds().intersects(mudHitbox)) {
-        player1.setPosition(150.0f, 375.0f); // Reiniciar posición de Fireboy
-    }
-    if (player2.getGlobalBounds().intersects(mudHitbox)) {
-        player2.setPosition(1000.0f, 375.0f); // Reiniciar posición de Watergirl
+    
+    // Colisiones con lodo
+    for(const auto& pos : mudPos) {
+        float hitWidth = 130.0f;
+        float hitHeight = 30.0f;
+        sf::FloatRect hitbox(pos.x - hitWidth/2.0f, pos.y - hitHeight/2.0f, hitWidth, hitHeight);
+        
+        if (player1.getGlobalBounds().intersects(hitbox)) {
+            player1.setPosition(currentLevel.getPlayer1StartPos());
+        }
+        if (player2.getGlobalBounds().intersects(hitbox)) {
+            player2.setPosition(currentLevel.getPlayer2StartPos());
+        }
     }
 
     // Actualizar animación
@@ -355,6 +454,30 @@ sf::FloatRect Game::getPlayer2Bounds()
     return player2.getGlobalBounds();
 }
 
+void Game::resetGame()
+{
+    // Reiniciar posiciones de jugadores según el nivel actual
+    player1.setPosition(currentLevel.getPlayer1StartPos());
+    player2.setPosition(currentLevel.getPlayer2StartPos());
+    
+    // Reiniciar diamantes
+    diamond1.setPosition(currentLevel.getDiamond1Pos());
+    diamond2.setPosition(currentLevel.getDiamond2Pos());
+    diamond1Visible = true;
+    diamond2Visible = true;
+    player1Diamonds = 0;
+    player2Diamonds = 0;
+    
+    // Reiniciar puertas
+    door1.setPosition(currentLevel.getDoor1Pos());
+    door2.setPosition(currentLevel.getDoor2Pos());
+    // Actualizar hitboxes de puertas
+    door1Hitbox = sf::FloatRect(currentLevel.getDoor1Pos().x + 10.0f, currentLevel.getDoor1Pos().y + 10.0f, 60.0f, 70.0f);
+    door2Hitbox = sf::FloatRect(currentLevel.getDoor2Pos().x + 10.0f, currentLevel.getDoor2Pos().y + 10.0f, 60.0f, 70.0f);
+    
+    std::cout << "Nivel cambiado y juego reiniciado" << std::endl;
+}
+
 void Game::render()
 {
     window.clear(sf::Color::Black);
@@ -364,13 +487,29 @@ void Game::render()
     
     window.draw(player1);
     window.draw(player2);
-    if (diamond1Visible) window.draw(diamond1); // Dibujar diamante solo si es visible
+    if (diamond1Visible) window.draw(diamond1);
     if (diamond2Visible) window.draw(diamond2);
-    window.draw(lava); // Dibujar obstáculos
-    window.draw(water); // Dibujar agua
-    window.draw(mud); // Dibujar lodo verde
-    window.draw(door1); // Dibujar puerta de Fireboy
-    window.draw(door2); // Dibujar puerta de Watergirl
+    
+    // Dibujar obstáculos solo si hay posiciones definidas en el nivel
+    std::vector<sf::Vector2f> lavaPos = currentLevel.getLavaPositions();
+    std::vector<sf::Vector2f> waterPos = currentLevel.getWaterPositions();
+    std::vector<sf::Vector2f> mudPos = currentLevel.getMudPositions();
+    
+    for(const auto& pos : lavaPos) {
+        lava.setPosition(pos);
+        window.draw(lava);
+    }
+    for(const auto& pos : waterPos) {
+        water.setPosition(pos);
+        window.draw(water);
+    }
+    for(const auto& pos : mudPos) {
+        mud.setPosition(pos);
+        window.draw(mud);
+    }
+    
+    window.draw(door1);
+    window.draw(door2);
     
     // Dibujar coordenadas del mouse (para desarrollo)
     window.draw(mouseCoordText);
