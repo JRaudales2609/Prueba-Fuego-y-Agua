@@ -15,22 +15,46 @@ private:
 
     sf::RenderWindow window;
 
-    // Jugadores
-    sf::RectangleShape player1;
-    sf::RectangleShape player2;
+    // Texturas
+    sf::Texture fireDiamondTexture;
+    sf::Texture waterDiamondTexture;
+    sf::Texture fireDoorTexture;
+    sf::Texture waterDoorTexture;
+    sf::Texture fireboyTexture;
+    sf::Texture watergirlTexture;
+    sf::Texture lavaTexture;
+    sf::Texture waterTexture;
+    sf::Texture mudTexture;
 
-    // Diamantes
-    sf::CircleShape diamond1;
-    sf::CircleShape diamond2;
+    // Jugadores (ahora usando sprites)
+    sf::Sprite player1;
+    sf::Sprite player2;
 
-    // Obstáculos
-    sf::RectangleShape lava;
-    sf::RectangleShape water;
-    sf::RectangleShape mud;
+    // Variables para animación
+    int currentFrame1;
+    int currentFrame2;
+    sf::Clock animationClock;
+    float frameTime;
+    float baseScale1; // Escala base del jugador 1
+    float baseScale2; // Escala base del jugador 2
 
-    // Puertas
-    sf::RectangleShape door1; // Puerta de Fireboy
-    sf::RectangleShape door2; // Puerta de Watergirl
+    // Diamantes (ahora usando sprites)
+    sf::Sprite diamond1;
+    sf::Sprite diamond2;
+
+    // Obstáculos (ahora usando sprites)
+    sf::Sprite lava;
+    sf::Sprite water;
+    sf::Sprite mud;
+
+    // Hitboxes ajustadas (solo el área del líquido)
+    sf::FloatRect lavaHitbox;
+    sf::FloatRect waterHitbox;
+    sf::FloatRect mudHitbox;
+
+    // Puertas (ahora usando sprites)
+    sf::Sprite door1; // Puerta de Fireboy
+    sf::Sprite door2; // Puerta de Watergirl
 
     // Velocidad de movimiento
     float speed;
@@ -38,6 +62,15 @@ private:
     // Contadores de diamantes recolectados
     int player1Diamonds;
     int player2Diamonds;
+
+    // Estado de visibilidad de diamantes
+    bool diamond1Visible;
+    bool diamond2Visible;
+
+    // Funciones auxiliares
+    void updateAnimation();
+    sf::FloatRect getPlayer1Bounds();
+    sf::FloatRect getPlayer2Bounds();
 };
 
 #endif // GAME_HPP

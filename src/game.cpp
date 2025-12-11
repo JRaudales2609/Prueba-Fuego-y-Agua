@@ -12,56 +12,142 @@ int main()
 
 Game::Game() :
     window(sf::VideoMode(1200, 800), "Fuego y Agua - 2 Jugadores"),
-    player1(sf::Vector2f(50.0f, 50.0f)),
-    player2(sf::Vector2f(50.0f, 50.0f)),
-    diamond1(15.0f),
-    diamond2(15.0f),
-    lava(sf::Vector2f(200.0f, 50.0f)),
-    water(sf::Vector2f(200.0f, 50.0f)),
-    mud(sf::Vector2f(200.0f, 50.0f)),
-    door1(sf::Vector2f(50.0f, 100.0f)),
-    door2(sf::Vector2f(50.0f, 100.0f)),
     speed(5.0f),
     player1Diamonds(0),
-    player2Diamonds(0)
+    player2Diamonds(0),
+    diamond1Visible(true),
+    diamond2Visible(true),
+    currentFrame1(0),
+    currentFrame2(0),
+    frameTime(0.1f),
+    baseScale1(0.0f),
+    baseScale2(0.0f)
 {
     window.setFramerateLimit(60);
 
-    // Jugador 1 - Rojo (WASD)
-    player1.setFillColor(sf::Color::Red);
+    // Cargar texturas de diamantes
+    if (!fireDiamondTexture.loadFromFile("assets/imagenes/diamantes/fire_diamond.png")) {
+        std::cerr << "Error: No se pudo cargar fire_diamond.png" << std::endl;
+    } else {
+        std::cout << "fire_diamond.png cargado correctamente" << std::endl;
+    }
+    if (!waterDiamondTexture.loadFromFile("assets/imagenes/diamantes/water_diamond.png")) {
+        std::cerr << "Error: No se pudo cargar water_diamond.png" << std::endl;
+    } else {
+        std::cout << "water_diamond.png cargado correctamente" << std::endl;
+    }
+
+    // Cargar texturas de puertas
+    if (!fireDoorTexture.loadFromFile("assets/imagenes/puertas/fire_door.png")) {
+        std::cerr << "Error: No se pudo cargar fire_door.png" << std::endl;
+    } else {
+        std::cout << "fire_door.png cargado correctamente" << std::endl;
+    }
+    if (!waterDoorTexture.loadFromFile("assets/imagenes/puertas/water_door.png")) {
+        std::cerr << "Error: No se pudo cargar water_door.png" << std::endl;
+    } else {
+        std::cout << "water_door.png cargado correctamente" << std::endl;
+    }
+
+    // Cargar texturas de personajes (sprite sheets)
+    if (!fireboyTexture.loadFromFile("assets/imagenes/personajes/fireboy_spritesheet.png")) {
+        std::cerr << "Error: No se pudo cargar fireboy_spritesheet.png" << std::endl;
+    } else {
+        std::cout << "fireboy_spritesheet.png cargado correctamente" << std::endl;
+    }
+    if (!watergirlTexture.loadFromFile("assets/imagenes/personajes/watergirl_spritesheet.png")) {
+        std::cerr << "Error: No se pudo cargar watergirl_spritesheet.png" << std::endl;
+    } else {
+        std::cout << "watergirl_spritesheet.png cargado correctamente" << std::endl;
+    }
+
+    // Cargar texturas de obstáculos
+    if (!lavaTexture.loadFromFile("assets/imagenes/obstaculos/lava.png")) {
+        std::cerr << "Error: No se pudo cargar lava.png" << std::endl;
+    } else {
+        std::cout << "lava.png cargado correctamente" << std::endl;
+    }
+    if (!waterTexture.loadFromFile("assets/imagenes/obstaculos/water.png")) {
+        std::cerr << "Error: No se pudo cargar water.png" << std::endl;
+    } else {
+        std::cout << "water.png cargado correctamente" << std::endl;
+    }
+    if (!mudTexture.loadFromFile("assets/imagenes/obstaculos/mud.png")) {
+        std::cerr << "Error: No se pudo cargar mud.png" << std::endl;
+    } else {
+        std::cout << "mud.png cargado correctamente" << std::endl;
+    }
+
+    // Configurar Jugador 1 - Fireboy (WASD)
+    player1.setTexture(fireboyTexture);
+    // Asumiendo 4 frames horizontales, cada frame es width/4
+    int frameWidth1 = fireboyTexture.getSize().x / 4;
+    int frameHeight1 = fireboyTexture.getSize().y;
+    player1.setTextureRect(sf::IntRect(0, 0, frameWidth1, frameHeight1));
+    player1.setOrigin(frameWidth1 / 2.0f, frameHeight1 / 2.0f); // Centrar el origen
     player1.setPosition(150.0f, 375.0f);
+    float player1Scale = 50.0f / frameWidth1; // Ajustar tamaño del jugador
+    player1.setScale(player1Scale, player1Scale);
+    baseScale1 = player1Scale; // Guardar escala base
 
-    // Jugador 2 - Azul (Flechas)
-    player2.setFillColor(sf::Color::Blue);
+    // Configurar Jugador 2 - Watergirl (Flechas)
+    player2.setTexture(watergirlTexture);
+    int frameWidth2 = watergirlTexture.getSize().x / 4;
+    int frameHeight2 = watergirlTexture.getSize().y;
+    player2.setTextureRect(sf::IntRect(0, 0, frameWidth2, frameHeight2));
+    player2.setOrigin(frameWidth2 / 2.0f, frameHeight2 / 2.0f); // Centrar el origen
     player2.setPosition(1000.0f, 375.0f);
+    float player2Scale = 50.0f / frameWidth2; // Ajustar tamaño del jugador
+    player2.setScale(player2Scale, player2Scale);
+    baseScale2 = player2Scale; // Guardar escala base
 
-    // Diamante 1 - Rojo
-    diamond1.setFillColor(sf::Color::Red);
+    // Diamante 1 - Fuego (usar sprite con textura)
+    diamond1.setTexture(fireDiamondTexture);
     diamond1.setPosition(300.0f, 400.0f);
+    // Calcular escala basada en el tamaño de la textura para que tenga 50 píxeles
+    float scale1 = 50.0f / fireDiamondTexture.getSize().x;
+    diamond1.setScale(scale1, scale1);
 
-    // Diamante 2 - Azul
-    diamond2.setFillColor(sf::Color::Blue);
+    // Diamante 2 - Agua (usar sprite con textura)
+    diamond2.setTexture(waterDiamondTexture);
     diamond2.setPosition(900.0f, 400.0f);
+    // Calcular escala basada en el tamaño de la textura para que tenga 50 píxeles
+    float scale2 = 50.0f / waterDiamondTexture.getSize().x;
+    diamond2.setScale(scale2, scale2);
 
-    // Lava
-    lava.setFillColor(sf::Color(255, 69, 0)); // Naranja
+    // Configurar Lava (usar sprite con textura)
+    lava.setTexture(lavaTexture);
     lava.setPosition(500.0f, 600.0f);
+    float lavaScale = 150.0f / lavaTexture.getSize().x; // Escalar a 150px de ancho
+    lava.setScale(lavaScale, lavaScale);
+    // Hitbox ajustada: solo la mitad inferior del sprite (donde está el líquido)
+    lavaHitbox = sf::FloatRect(510.0f, 620.0f, 130.0f, 20.0f);
 
-    // Agua
-    water.setFillColor(sf::Color::Blue);
+    // Configurar Agua (usar sprite con textura)
+    water.setTexture(waterTexture);
     water.setPosition(300.0f, 500.0f);
+    float waterScale = 150.0f / waterTexture.getSize().x;
+    water.setScale(waterScale, waterScale);
+    waterHitbox = sf::FloatRect(310.0f, 520.0f, 130.0f, 20.0f);
 
-    // Lodo verde
-    mud.setFillColor(sf::Color(0, 128, 0)); // Verde oscuro
+    // Configurar Lodo (usar sprite con textura)
+    mud.setTexture(mudTexture);
     mud.setPosition(700.0f, 500.0f);
+    float mudScale = 150.0f / mudTexture.getSize().x;
+    mud.setScale(mudScale, mudScale);
+    mudHitbox = sf::FloatRect(710.0f, 520.0f, 130.0f, 20.0f);
 
-    // Puerta 1 - Rojo (Fireboy)
-    door1.setFillColor(sf::Color::Red);
-    door1.setPosition(100.0f, 100.0f);
+    // Puerta 1 - Fuego (usar sprite con textura)
+    door1.setTexture(fireDoorTexture);
+    door1.setPosition(50.0f, 650.0f); // Mover a la parte inferior izquierda
+    float doorScale1 = 120.0f / fireDoorTexture.getSize().x;
+    door1.setScale(doorScale1, doorScale1);
 
-    // Puerta 2 - Azul (Watergirl)
-    door2.setFillColor(sf::Color::Blue);
-    door2.setPosition(1050.0f, 100.0f);
+    // Puerta 2 - Agua (usar sprite con textura)
+    door2.setTexture(waterDoorTexture);
+    door2.setPosition(1070.0f, 650.0f); // Mover a la parte inferior derecha
+    float doorScale2 = 120.0f / waterDoorTexture.getSize().x;
+    door2.setScale(doorScale2, doorScale2);
 }
 
 void Game::run()
@@ -129,12 +215,12 @@ void Game::update()
         player2.setPosition(player2.getPosition().x, 750);
 
     // Detectar colisiones con los diamantes
-    if (player1.getGlobalBounds().intersects(diamond1.getGlobalBounds())) {
-        diamond1.setPosition(-50.0f, -50.0f); // Mover fuera de la pantalla
+    if (diamond1Visible && player1.getGlobalBounds().intersects(diamond1.getGlobalBounds())) {
+        diamond1Visible = false; // Ocultar el diamante
         player1Diamonds++;
     }
-    if (player2.getGlobalBounds().intersects(diamond2.getGlobalBounds())) {
-        diamond2.setPosition(-50.0f, -50.0f); // Mover fuera de la pantalla
+    if (diamond2Visible && player2.getGlobalBounds().intersects(diamond2.getGlobalBounds())) {
+        diamond2Visible = false; // Ocultar el diamante
         player2Diamonds++;
     }
 
@@ -148,27 +234,101 @@ void Game::update()
         window.close(); // Watergirl gana
     }
 
-    // Detectar colisiones con la lava
-    if (player1.getGlobalBounds().intersects(lava.getGlobalBounds())) {
+    // Detectar colisiones con la lava (usando hitbox ajustada)
+    if (player1.getGlobalBounds().intersects(lavaHitbox)) {
         // Fireboy puede pasar por la lava
-    } else if (player2.getGlobalBounds().intersects(lava.getGlobalBounds())) {
+    } else if (player2.getGlobalBounds().intersects(lavaHitbox)) {
         player2.setPosition(1000.0f, 375.0f); // Reiniciar posición de Watergirl
     }
 
-    // Detectar colisiones con el agua
-    if (player2.getGlobalBounds().intersects(water.getGlobalBounds())) {
+    // Detectar colisiones con el agua (usando hitbox ajustada)
+    if (player2.getGlobalBounds().intersects(waterHitbox)) {
         // Watergirl puede pasar por el agua
-    } else if (player1.getGlobalBounds().intersects(water.getGlobalBounds())) {
+    } else if (player1.getGlobalBounds().intersects(waterHitbox)) {
         player1.setPosition(150.0f, 375.0f); // Reiniciar posición de Fireboy
     }
 
-    // Detectar colisiones con el lodo verde
-    if (player1.getGlobalBounds().intersects(mud.getGlobalBounds())) {
+    // Detectar colisiones con el lodo verde (usando hitbox ajustada)
+    if (player1.getGlobalBounds().intersects(mudHitbox)) {
         player1.setPosition(150.0f, 375.0f); // Reiniciar posición de Fireboy
     }
-    if (player2.getGlobalBounds().intersects(mud.getGlobalBounds())) {
+    if (player2.getGlobalBounds().intersects(mudHitbox)) {
         player2.setPosition(1000.0f, 375.0f); // Reiniciar posición de Watergirl
     }
+
+    // Actualizar animación
+    updateAnimation();
+}
+
+void Game::updateAnimation()
+{
+    // Actualizar animación si ha pasado suficiente tiempo
+    if (animationClock.getElapsedTime().asSeconds() > frameTime) {
+        // Determinar si los jugadores están en movimiento y dirección
+        bool player1Moving = sf::Keyboard::isKeyPressed(sf::Keyboard::W) ||
+                            sf::Keyboard::isKeyPressed(sf::Keyboard::S) ||
+                            sf::Keyboard::isKeyPressed(sf::Keyboard::A) ||
+                            sf::Keyboard::isKeyPressed(sf::Keyboard::D);
+
+        bool player2Moving = sf::Keyboard::isKeyPressed(sf::Keyboard::Up) ||
+                            sf::Keyboard::isKeyPressed(sf::Keyboard::Down) ||
+                            sf::Keyboard::isKeyPressed(sf::Keyboard::Left) ||
+                            sf::Keyboard::isKeyPressed(sf::Keyboard::Right);
+
+        // Dimensiones de frames para cada jugador
+        int frameWidth1 = fireboyTexture.getSize().x / 4;
+        int frameHeight1 = fireboyTexture.getSize().y;
+        int frameWidth2 = watergirlTexture.getSize().x / 4;
+        int frameHeight2 = watergirlTexture.getSize().y;
+
+        // Animar jugador 1 si se está moviendo
+        if (player1Moving) {
+            currentFrame1 = (currentFrame1 + 1) % 4; // Ciclar entre 0-3
+            player1.setTextureRect(sf::IntRect(currentFrame1 * frameWidth1, 0, frameWidth1, frameHeight1));
+            
+            // Voltear sprite según la dirección horizontal
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+                // Moviendo a la izquierda - voltear sprite
+                player1.setScale(-baseScale1, baseScale1);
+            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+                // Moviendo a la derecha - orientación normal
+                player1.setScale(baseScale1, baseScale1);
+            }
+        } else {
+            currentFrame1 = 0; // Volver al primer frame cuando está quieto
+            player1.setTextureRect(sf::IntRect(0, 0, frameWidth1, frameHeight1));
+        }
+
+        // Animar jugador 2 si se está moviendo
+        if (player2Moving) {
+            currentFrame2 = (currentFrame2 + 1) % 4; // Ciclar entre 0-3
+            player2.setTextureRect(sf::IntRect(currentFrame2 * frameWidth2, 0, frameWidth2, frameHeight2));
+            
+            // Voltear sprite según la dirección horizontal
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+                // Moviendo a la izquierda - voltear sprite
+                player2.setScale(-baseScale2, baseScale2);
+            } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
+                // Moviendo a la derecha - orientación normal
+                player2.setScale(baseScale2, baseScale2);
+            }
+        } else {
+            currentFrame2 = 0; // Volver al primer frame cuando está quieto
+            player2.setTextureRect(sf::IntRect(0, 0, frameWidth2, frameHeight2));
+        }
+
+        animationClock.restart();
+    }
+}
+
+sf::FloatRect Game::getPlayer1Bounds()
+{
+    return player1.getGlobalBounds();
+}
+
+sf::FloatRect Game::getPlayer2Bounds()
+{
+    return player2.getGlobalBounds();
 }
 
 void Game::render()
@@ -176,8 +336,8 @@ void Game::render()
     window.clear(sf::Color::Black);
     window.draw(player1);
     window.draw(player2);
-    window.draw(diamond1); // Dibujar diamantes
-    window.draw(diamond2);
+    if (diamond1Visible) window.draw(diamond1); // Dibujar diamante solo si es visible
+    if (diamond2Visible) window.draw(diamond2);
     window.draw(lava); // Dibujar obstáculos
     window.draw(water); // Dibujar agua
     window.draw(mud); // Dibujar lodo verde
