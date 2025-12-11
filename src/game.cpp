@@ -12,6 +12,7 @@ int main()
 
 Game::Game() :
     window(sf::VideoMode(1200, 800), "Fuego y Agua - 2 Jugadores"),
+    currentLevel(1),
     speed(5.0f),
     player1Diamonds(0),
     player2Diamonds(0),
@@ -24,6 +25,19 @@ Game::Game() :
     baseScale2(0.0f)
 {
     window.setFramerateLimit(60);
+
+    // Cargar el nivel
+    currentLevel.loadLevel();
+
+    // Cargar fuente para texto de coordenadas (usa fuente del sistema)
+    // Si no funciona, descarga una fuente .ttf y ponla en assets/fonts/
+    if (!font.loadFromFile("C:/Windows/Fonts/arial.ttf")) {
+        std::cerr << "Advertencia: No se pudo cargar la fuente" << std::endl;
+    }
+    mouseCoordText.setFont(font);
+    mouseCoordText.setCharacterSize(20);
+    mouseCoordText.setFillColor(sf::Color::White);
+    mouseCoordText.setPosition(10.0f, 10.0f);
 
     // Cargar texturas de diamantes
     if (!fireDiamondTexture.loadFromFile("assets/imagenes/diamantes/fire_diamond.png")) {
@@ -118,36 +132,42 @@ Game::Game() :
     // Configurar Lava (usar sprite con textura)
     lava.setTexture(lavaTexture);
     lava.setPosition(500.0f, 600.0f);
-    float lavaScale = 150.0f / lavaTexture.getSize().x; // Escalar a 150px de ancho
+    float lavaScale = 150.0f / lavaTexture.getSize().x;
     lava.setScale(lavaScale, lavaScale);
-    // Hitbox ajustada: solo la mitad inferior del sprite (donde está el líquido)
-    lavaHitbox = sf::FloatRect(510.0f, 620.0f, 130.0f, 20.0f);
+    // Hitbox simple: rectángulo directo (X, Y, Ancho, Alto)
+    lavaHitbox = sf::FloatRect(510.0f, 700.0f, 130.0f, 15.0f);
 
     // Configurar Agua (usar sprite con textura)
     water.setTexture(waterTexture);
     water.setPosition(300.0f, 500.0f);
     float waterScale = 150.0f / waterTexture.getSize().x;
     water.setScale(waterScale, waterScale);
-    waterHitbox = sf::FloatRect(310.0f, 520.0f, 130.0f, 20.0f);
+    // Hitbox simple: rectángulo directo
+    waterHitbox = sf::FloatRect(310.0f, 600.0f, 130.0f, 15.0f);
 
     // Configurar Lodo (usar sprite con textura)
     mud.setTexture(mudTexture);
     mud.setPosition(700.0f, 500.0f);
     float mudScale = 150.0f / mudTexture.getSize().x;
     mud.setScale(mudScale, mudScale);
-    mudHitbox = sf::FloatRect(710.0f, 520.0f, 130.0f, 20.0f);
+    // Hitbox simple: rectángulo directo
+    mudHitbox = sf::FloatRect(710.0f, 600.0f, 130.0f, 15.0f);
 
     // Puerta 1 - Fuego (usar sprite con textura)
     door1.setTexture(fireDoorTexture);
-    door1.setPosition(50.0f, 650.0f); // Mover a la parte inferior izquierda
-    float doorScale1 = 120.0f / fireDoorTexture.getSize().x;
+    door1.setPosition(50.0f, 650.0f);
+    float doorScale1 = 80.0f / fireDoorTexture.getSize().x; // Reducido a 80px
     door1.setScale(doorScale1, doorScale1);
+    // Hitbox un poco más grande que el personaje (~60x60)
+    door1Hitbox = sf::FloatRect(50.0f + 10.0f, 650.0f + 10.0f, 60.0f, 70.0f);
 
     // Puerta 2 - Agua (usar sprite con textura)
     door2.setTexture(waterDoorTexture);
-    door2.setPosition(1070.0f, 650.0f); // Mover a la parte inferior derecha
-    float doorScale2 = 120.0f / waterDoorTexture.getSize().x;
+    door2.setPosition(1070.0f, 650.0f);
+    float doorScale2 = 80.0f / waterDoorTexture.getSize().x; // Reducido a 80px
     door2.setScale(doorScale2, doorScale2);
+    // Hitbox un poco más grande que el personaje
+    door2Hitbox = sf::FloatRect(1070.0f + 10.0f, 650.0f + 10.0f, 60.0f, 70.0f);
 }
 
 void Game::run()
@@ -173,6 +193,10 @@ void Game::processEvents()
 
 void Game::update()
 {
+    // Obtener posición del mouse y mostrarla en pantalla
+    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+    mouseCoordText.setString("Mouse: X=" + std::to_string(mousePos.x) + " Y=" + std::to_string(mousePos.y));
+
     // Movimiento Jugador 1 (WASD)
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
         player1.move(0.0f, -speed);
@@ -224,12 +248,12 @@ void Game::update()
         player2Diamonds++;
     }
 
-    // Detectar colisiones con las puertas
-    if (player1.getGlobalBounds().intersects(door1.getGlobalBounds()) && player1Diamonds >= 1) {
+    // Detectar colisiones con las puertas (usando hitboxes ajustadas)
+    if (player1.getGlobalBounds().intersects(door1Hitbox) && player1Diamonds >= 1) {
         std::cout << "Fireboy ha ganado!" << std::endl;
         window.close(); // Fireboy gana
     }
-    if (player2.getGlobalBounds().intersects(door2.getGlobalBounds()) && player2Diamonds >= 1) {
+    if (player2.getGlobalBounds().intersects(door2Hitbox) && player2Diamonds >= 1) {
         std::cout << "Watergirl ha ganado!" << std::endl;
         window.close(); // Watergirl gana
     }
@@ -334,6 +358,10 @@ sf::FloatRect Game::getPlayer2Bounds()
 void Game::render()
 {
     window.clear(sf::Color::Black);
+    
+    // Dibujar fondo del nivel
+    currentLevel.render(window);
+    
     window.draw(player1);
     window.draw(player2);
     if (diamond1Visible) window.draw(diamond1); // Dibujar diamante solo si es visible
@@ -343,5 +371,9 @@ void Game::render()
     window.draw(mud); // Dibujar lodo verde
     window.draw(door1); // Dibujar puerta de Fireboy
     window.draw(door2); // Dibujar puerta de Watergirl
+    
+    // Dibujar coordenadas del mouse (para desarrollo)
+    window.draw(mouseCoordText);
+    
     window.display();
 }

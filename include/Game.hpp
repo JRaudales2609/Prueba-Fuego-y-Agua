@@ -2,6 +2,7 @@
 #define GAME_HPP
 
 #include <SFML/Graphics.hpp>
+#include "Level.hpp"
 
 class Game {
 public:
@@ -14,6 +15,13 @@ private:
     void render();
 
     sf::RenderWindow window;
+
+    // Sistema de niveles
+    Level currentLevel;
+
+    // Texto para mostrar coordenadas del mouse (temporal para desarrollo)
+    sf::Font font;
+    sf::Text mouseCoordText;
 
     // Texturas
     sf::Texture fireDiamondTexture;
@@ -55,6 +63,10 @@ private:
     // Puertas (ahora usando sprites)
     sf::Sprite door1; // Puerta de Fireboy
     sf::Sprite door2; // Puerta de Watergirl
+    
+    // Hitboxes ajustadas para las puertas
+    sf::FloatRect door1Hitbox;
+    sf::FloatRect door2Hitbox;
 
     // Velocidad de movimiento
     float speed;

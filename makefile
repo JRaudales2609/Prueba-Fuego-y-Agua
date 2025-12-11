@@ -4,27 +4,23 @@ BIN_DIR := bin
 
 SFML := -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio -lbox2d
 
-# Obtener todos los archivos .cpp en el directorio de origen
-CPP_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+# Archivos fuente
+SOURCES := $(SRC_DIR)/game.cpp $(SRC_DIR)/Level.cpp
 
-# Generar los nombres de los archivos .exe en el directorio de destino
-EXE_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(BIN_DIR)/%.exe,$(CPP_FILES))
-
-# Regla para compilar cada archivo .cpp y generar el archivo .exe correspondiente
-$(BIN_DIR)/%.exe: $(SRC_DIR)/%.cpp
+# Regla principal para compilar el juego
+$(BIN_DIR)/game.exe: $(SOURCES)
 	@mkdir -p $(BIN_DIR)
-	g++ $< -o $@ $(SFML) -Iinclude
+	g++ $(SOURCES) -o $@ $(SFML) -Iinclude
 
-# Regla por defecto para compilar todos los archivos .cpp
-all: $(EXE_FILES)
+# Regla por defecto
+all: $(BIN_DIR)/game.exe
 
-# Regla para ejecutar cada archivo .exe
-run%: $(BIN_DIR)/%.exe
-	./$<
+# Regla para ejecutar el juego
+run: $(BIN_DIR)/game.exe
+	./$(BIN_DIR)/game.exe
 
 # Regla para limpiar los archivos generados
 clean:
-	rm -f $(EXE_FILES)
+	rm -f $(BIN_DIR)/game.exe
 
-.PHONY: all clean
-.PHONY: run-%
+.PHONY: all clean run
