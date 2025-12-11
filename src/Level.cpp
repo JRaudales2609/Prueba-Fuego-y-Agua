@@ -109,16 +109,17 @@ void Level::setupLevel1() {
     }
     
     // Posiciones iniciales de jugadores - esquina inferior izquierda
-    player1Start = sf::Vector2f(75.0f, 725.0f);   // Fireboy
-    player2Start = sf::Vector2f(125.0f, 725.0f);  // Watergirl
+    // Suelo en Y=750, jugadores deben estar encima, no dentro
+    player1Start = sf::Vector2f(75.0f, 710.0f);   // Fireboy
+    player2Start = sf::Vector2f(125.0f, 710.0f);  // Watergirl
     
     // Posiciones de diamantes
     diamond1Pos = sf::Vector2f(350.0f, 654.0f);  // Diamante rojo (fuego)
     diamond2Pos = sf::Vector2f(695.0f, 654.0f);  // Diamante azul (agua)
     
-    // Posiciones de puertas - fuera de pantalla (ocultas por ahora)
-    door1Pos = sf::Vector2f(-100.0f, -100.0f);
-    door2Pos = sf::Vector2f(-100.0f, -100.0f);
+    // Posiciones de puertas - sobre la plataforma superior derecha (Y=220)
+    door1Pos = sf::Vector2f(950.0f, 110.0f);   // Puerta de fuego
+    door2Pos = sf::Vector2f(1050.0f, 110.0f);  // Puerta de agua (a la derecha)
     
     // Obstáculos del nivel 1
     lavaPositions.push_back(sf::Vector2f(380.0f, 760.0f));
@@ -132,6 +133,29 @@ void Level::setupLevel1() {
     // Plataforma larga desde pared izquierda
     for(int x = 50; x <= 800; x += 50) {
         addBlock("platform", x, 500);
+    }
+    
+    // Borde vertical - esquina inferior derecha en (341, 502), extendiéndose hasta Y=370
+    for(int y = 356; y <= 456; y += 50) {
+        addBlock("border_vertical", 291, y);
+    }
+    
+    // Plataforma superior - desde pared izquierda hasta X=217
+    for(int x = 50; x <= 150; x += 50) {
+        addBlock("platform", x, 350);
+    }
+    
+    // Plataforma media - desde X=198 hasta X=330
+    addBlock("platform", 200, 220);
+    addBlock("platform", 250, 220);
+    addBlock("platform", 300, 220);
+    
+    // Plataforma pequeña - centro en (550, 220)
+    addBlock("platform", 525, 235);
+    
+    // Plataforma superior derecha - desde aprox X=850 hasta pared derecha (X=1150)
+    for(int x = 850; x <= 1100; x += 50) {
+        addBlock("platform", x, 220);
     }
 }
 

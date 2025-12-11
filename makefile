@@ -1,26 +1,53 @@
-# Directorios de origen y destino
-SRC_DIR := src
-BIN_DIR := bin
+.SUFFIXES:
+.PHONY: all clean run info
 
-SFML := -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio -lbox2d
+CXX := g++
+CXXFLAGS := -std=c++17 -I include
+LDFLAGS := -L lib -lsfml-graphics -lsfml-window -lsfml-system
+TARGET := FuegoYAgua.exe
+SOURCES := src/main.cpp src/Menu.cpp src/LevelSelector.cpp src/Level.cpp src/game.cpp
 
-# Archivos fuente
-SOURCES := $(SRC_DIR)/game.cpp $(SRC_DIR)/Level.cpp
+all: $(TARGET)
 
-# Regla principal para compilar el juego
-$(BIN_DIR)/game.exe: $(SOURCES)
-	@mkdir -p $(BIN_DIR)
-	g++ $(SOURCES) -o $@ $(SFML) -Iinclude
+$(TARGET): $(SOURCES)
+	@echo ""
+	@echo "========================================"
+	@echo "  Compilando Fuego y Agua..."
+	@echo "========================================"
+	@echo ""
+	$(CXX) $(SOURCES) -o $(TARGET) $(CXXFLAGS) $(LDFLAGS)
+	@echo ""
+	@echo "========================================"
+	@echo "  Compilacion exitosa!"
+	@echo "  Ejecuta: make run"
+	@echo "========================================"
+	@echo ""
 
-# Regla por defecto
-all: $(BIN_DIR)/game.exe
-
-# Regla para ejecutar el juego
-run: $(BIN_DIR)/game.exe
-	./$(BIN_DIR)/game.exe
-
-# Regla para limpiar los archivos generados
 clean:
-	rm -f $(BIN_DIR)/game.exe
+	@echo "Limpiando archivos..."
+	@rm -f $(TARGET) 2>/dev/null || true
+	@echo "Limpieza completada"
 
-.PHONY: all clean run
+run: $(TARGET)
+	@echo ""
+	@echo "========================================"
+	@echo "  Ejecutando Fuego y Agua..."
+	@echo "========================================"
+	@echo ""
+	@./$(TARGET)
+
+info:
+	@echo "========================================"
+	@echo "  Informacion del proyecto"
+	@echo "========================================"
+	@echo "Archivos a compilar:"
+	@echo "  - src/main.cpp"
+	@echo "  - src/Menu.cpp"
+	@echo "  - src/LevelSelector.cpp"
+	@echo "  - src/Level.cpp"
+	@echo "  - src/game.cpp"
+	@echo ""
+	@echo "Compilador: $(CXX)"
+	@echo "Flags: $(CXXFLAGS)"
+	@echo "Librerias: $(LDFLAGS)"
+	@echo ""

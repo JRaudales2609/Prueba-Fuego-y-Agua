@@ -2,17 +2,9 @@
 #include "../include/Game.hpp"
 #include <iostream>
 
-int main()
-{
-    Game game;
-    game.run();
-
-    return 0;
-}
-
-Game::Game() :
+Game::Game(int startingLevel) :
     window(sf::VideoMode(1200, 800), "Fuego y Agua - 2 Jugadores"),
-    currentLevel(1),
+    currentLevel(startingLevel), // Usar el nivel seleccionado
     speed(7.0f),
     gravity(0.5f),
     jumpForce(-9.5f),
@@ -32,6 +24,7 @@ Game::Game() :
     baseScale1(0.0f),
     baseScale2(0.0f)
 {
+    std::cout << "Iniciando juego en nivel " << startingLevel << std::endl;
     window.setFramerateLimit(60);
 
     // Cargar el nivel
@@ -160,16 +153,16 @@ Game::Game() :
     door1.setPosition(50.0f, 650.0f);
     float doorScale1 = 80.0f / fireDoorTexture.getSize().x; // Reducido a 80px
     door1.setScale(doorScale1, doorScale1);
-    // Hitbox un poco más grande que el personaje (~60x60)
-    door1Hitbox = sf::FloatRect(50.0f + 10.0f, 650.0f + 10.0f, 60.0f, 70.0f);
+    // Hitbox pequeña en el centro del portal (~30x40)
+    door1Hitbox = sf::FloatRect(50.0f + 25.0f, 650.0f + 20.0f, 30.0f, 40.0f);
 
     // Puerta 2 - Agua (usar sprite con textura)
     door2.setTexture(waterDoorTexture);
     door2.setPosition(1070.0f, 650.0f);
     float doorScale2 = 80.0f / waterDoorTexture.getSize().x; // Reducido a 80px
     door2.setScale(doorScale2, doorScale2);
-    // Hitbox un poco más grande que el personaje
-    door2Hitbox = sf::FloatRect(1070.0f + 10.0f, 650.0f + 10.0f, 60.0f, 70.0f);
+    // Hitbox pequeña en el centro del portal
+    door2Hitbox = sf::FloatRect(1070.0f + 25.0f, 650.0f + 20.0f, 30.0f, 40.0f);
 }
 
 void Game::run()
@@ -237,6 +230,8 @@ void Game::update()
     player1VelocityY += gravity;
     player2VelocityY += gravity;
 
+    std::vector<sf::FloatRect> platforms = currentLevel.getPlatforms();
+
     // === MOVIMIENTO HORIZONTAL Jugador 1 (A/D) ===
     sf::Vector2f player1OldPos = player1.getPosition();
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
@@ -245,11 +240,25 @@ void Game::update()
         player1.move(speed, 0.0f);
 
     // Colisión horizontal Jugador 1
-    std::vector<sf::FloatRect> platforms = currentLevel.getPlatforms();
+    bool player1HorizontalCollision = false;
     for(const auto& platform : platforms) {
-        if (player1.getGlobalBounds().intersects(platform)) {
-            player1.setPosition(player1OldPos);
-            break;
+        sf::FloatRect p1Bounds = player1.getGlobalBounds();
+        if (p1Bounds.intersects(platform)) {
+            // Calcular superposiciones
+            float overlapLeft = (p1Bounds.left + p1Bounds.width) - platform.left;
+            float overlapRight = (platform.left + platform.width) - p1Bounds.left;
+            float overlapTop = (p1Bounds.top + p1Bounds.height) - platform.top;
+            float overlapBottom = (platform.top + platform.height) - p1Bounds.top;
+            
+            // Determinar cual superposición es menor para saber desde dónde viene la colisión
+            float minOverlap = std::min({overlapLeft, overlapRight, overlapTop, overlapBottom});
+            
+            // Solo bloquear si la menor superposición es lateral (left o right)
+            if (minOverlap == overlapLeft || minOverlap == overlapRight) {
+                player1.setPosition(player1OldPos);
+                player1HorizontalCollision = true;
+                break;
+            }
         }
     }
 
@@ -260,17 +269,17 @@ void Game::update()
     // Colisión vertical Jugador 1
     player1OnGround = false;
     for(const auto& platform : platforms) {
-        if (player1.getGlobalBounds().intersects(platform)) {
-            // Determinar si está cayendo (velocidad positiva = hacia abajo)
+        sf::FloatRect p1Bounds = player1.getGlobalBounds();
+        if (p1Bounds.intersects(platform)) {
             if (player1VelocityY > 0) {
-                // Está cayendo, colocar sobre la plataforma
-                player1.setPosition(player1OldPos.x, platform.top - player1.getGlobalBounds().height / 2.0f);
+                // Cayendo
+                player1.setPosition(player1OldPos);
                 player1VelocityY = 0.0f;
                 player1OnGround = true;
-                player1DoubleJumpAvailable = false; // Resetear doble salto
-            } else {
-                // Está subiendo, golpeó el techo
-                player1.setPosition(player1OldPos.x, platform.top + platform.height + player1.getGlobalBounds().height / 2.0f);
+                player1DoubleJumpAvailable = false;
+            } else if (player1VelocityY < 0) {
+                // Subiendo
+                player1.setPosition(player1OldPos);
                 player1VelocityY = 0.0f;
             }
             break;
@@ -285,10 +294,25 @@ void Game::update()
         player2.move(speed, 0.0f);
 
     // Colisión horizontal Jugador 2
+    bool player2HorizontalCollision = false;
     for(const auto& platform : platforms) {
-        if (player2.getGlobalBounds().intersects(platform)) {
-            player2.setPosition(player2OldPos);
-            break;
+        sf::FloatRect p2Bounds = player2.getGlobalBounds();
+        if (p2Bounds.intersects(platform)) {
+            // Calcular superposiciones
+            float overlapLeft = (p2Bounds.left + p2Bounds.width) - platform.left;
+            float overlapRight = (platform.left + platform.width) - p2Bounds.left;
+            float overlapTop = (p2Bounds.top + p2Bounds.height) - platform.top;
+            float overlapBottom = (platform.top + platform.height) - p2Bounds.top;
+            
+            // Determinar cual superposición es menor para saber desde dónde viene la colisión
+            float minOverlap = std::min({overlapLeft, overlapRight, overlapTop, overlapBottom});
+            
+            // Solo bloquear si la menor superposición es lateral (left o right)
+            if (minOverlap == overlapLeft || minOverlap == overlapRight) {
+                player2.setPosition(player2OldPos);
+                player2HorizontalCollision = true;
+                break;
+            }
         }
     }
 
@@ -299,16 +323,17 @@ void Game::update()
     // Colisión vertical Jugador 2
     player2OnGround = false;
     for(const auto& platform : platforms) {
-        if (player2.getGlobalBounds().intersects(platform)) {
+        sf::FloatRect p2Bounds = player2.getGlobalBounds();
+        if (p2Bounds.intersects(platform)) {
             if (player2VelocityY > 0) {
-                // Está cayendo, colocar sobre la plataforma
-                player2.setPosition(player2OldPos.x, platform.top - player2.getGlobalBounds().height / 2.0f);
+                // Cayendo
+                player2.setPosition(player2OldPos);
                 player2VelocityY = 0.0f;
                 player2OnGround = true;
-                player2DoubleJumpAvailable = false; // Resetear doble salto
-            } else {
-                // Está subiendo, golpeó el techo
-                player2.setPosition(player2OldPos.x, platform.top + platform.height + player2.getGlobalBounds().height / 2.0f);
+                player2DoubleJumpAvailable = false;
+            } else if (player2VelocityY < 0) {
+                // Subiendo
+                player2.setPosition(player2OldPos);
                 player2VelocityY = 0.0f;
             }
             break;
@@ -471,9 +496,9 @@ void Game::resetGame()
     // Reiniciar puertas
     door1.setPosition(currentLevel.getDoor1Pos());
     door2.setPosition(currentLevel.getDoor2Pos());
-    // Actualizar hitboxes de puertas
-    door1Hitbox = sf::FloatRect(currentLevel.getDoor1Pos().x + 10.0f, currentLevel.getDoor1Pos().y + 10.0f, 60.0f, 70.0f);
-    door2Hitbox = sf::FloatRect(currentLevel.getDoor2Pos().x + 10.0f, currentLevel.getDoor2Pos().y + 10.0f, 60.0f, 70.0f);
+    // Actualizar hitboxes de puertas - pequeñas en el centro
+    door1Hitbox = sf::FloatRect(currentLevel.getDoor1Pos().x + 25.0f, currentLevel.getDoor1Pos().y + 20.0f, 30.0f, 40.0f);
+    door2Hitbox = sf::FloatRect(currentLevel.getDoor2Pos().x + 25.0f, currentLevel.getDoor2Pos().y + 20.0f, 30.0f, 40.0f);
     
     std::cout << "Nivel cambiado y juego reiniciado" << std::endl;
 }
@@ -485,6 +510,11 @@ void Game::render()
     // Dibujar fondo del nivel
     currentLevel.render(window);
     
+    // Dibujar puertas primero (para que estén detrás de los jugadores)
+    window.draw(door1);
+    window.draw(door2);
+    
+    // Dibujar jugadores encima de las puertas
     window.draw(player1);
     window.draw(player2);
     if (diamond1Visible) window.draw(diamond1);
@@ -507,9 +537,6 @@ void Game::render()
         mud.setPosition(pos);
         window.draw(mud);
     }
-    
-    window.draw(door1);
-    window.draw(door2);
     
     // Dibujar coordenadas del mouse (para desarrollo)
     window.draw(mouseCoordText);

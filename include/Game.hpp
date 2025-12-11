@@ -3,10 +3,12 @@
 
 #include <SFML/Graphics.hpp>
 #include "Level.hpp"
+#include "Menu.hpp"
+#include "GameState.hpp"
 
 class Game {
 public:
-    Game();
+    Game(int startingLevel = 1); // Aceptar nivel inicial
     void run();
 
 private:
@@ -15,6 +17,11 @@ private:
     void render();
 
     sf::RenderWindow window;
+
+    // Estados del juego
+    GameState currentState;
+    Menu menu;
+    bool gameInitialized;
 
     // Sistema de niveles
     Level currentLevel;
@@ -89,6 +96,7 @@ private:
     sf::FloatRect getPlayer1Bounds();
     sf::FloatRect getPlayer2Bounds();
     void resetGame(); // Reiniciar posiciones al cambiar de nivel
+    void initializeGame(); // Nueva función para inicializar el juego
 };
 
 #endif // GAME_HPP
