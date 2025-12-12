@@ -4,7 +4,7 @@
 
 Game::Game(int startingLevel) :
     window(sf::VideoMode(1200, 800), "Fuego y Agua - 2 Jugadores"),
-    currentLevel(startingLevel), // Usar el nivel seleccionado
+    currentLevel(startingLevel),
     speed(7.0f),
     gravity(0.5f),
     jumpForce(-9.5f),
@@ -18,11 +18,14 @@ Game::Game(int startingLevel) :
     player2Diamonds(0),
     diamond1Visible(true),
     diamond2Visible(true),
+    diamond3Visible(true),  // NUEVO
+    diamond4Visible(true),  // NUEVO
     currentFrame1(0),
     currentFrame2(0),
     frameTime(0.1f),
     baseScale1(0.0f),
-    baseScale2(0.0f)
+    baseScale2(0.0f),
+    isPaused(false)
 {
     std::cout << "Iniciando juego en nivel " << startingLevel << std::endl;
     window.setFramerateLimit(60);
@@ -30,10 +33,11 @@ Game::Game(int startingLevel) :
     // Cargar el nivel
     currentLevel.loadLevel();
 
-    // Cargar fuente para texto de coordenadas (usa fuente del sistema)
-    // Si no funciona, descarga una fuente .ttf y ponla en assets/fonts/
-    if (!font.loadFromFile("C:/Windows/Fonts/arial.ttf")) {
-        std::cerr << "Advertencia: No se pudo cargar la fuente" << std::endl;
+    // Cargar fuente
+    if (!font.loadFromFile("assets/fonts/ThaleahFat.ttf")) {
+        if (!font.loadFromFile("C:/Windows/Fonts/arial.ttf")) {
+            std::cerr << "Advertencia: No se pudo cargar la fuente" << std::endl;
+        }
     }
     mouseCoordText.setFont(font);
     mouseCoordText.setCharacterSize(20);
@@ -43,96 +47,87 @@ Game::Game(int startingLevel) :
     // Cargar texturas de diamantes
     if (!fireDiamondTexture.loadFromFile("assets/imagenes/diamantes/fire_diamond.png")) {
         std::cerr << "Error: No se pudo cargar fire_diamond.png" << std::endl;
-    } else {
-        std::cout << "fire_diamond.png cargado correctamente" << std::endl;
     }
     if (!waterDiamondTexture.loadFromFile("assets/imagenes/diamantes/water_diamond.png")) {
         std::cerr << "Error: No se pudo cargar water_diamond.png" << std::endl;
-    } else {
-        std::cout << "water_diamond.png cargado correctamente" << std::endl;
     }
-
-    // Cargar texturas de puertas
     if (!fireDoorTexture.loadFromFile("assets/imagenes/puertas/fire_door.png")) {
         std::cerr << "Error: No se pudo cargar fire_door.png" << std::endl;
-    } else {
-        std::cout << "fire_door.png cargado correctamente" << std::endl;
     }
     if (!waterDoorTexture.loadFromFile("assets/imagenes/puertas/water_door.png")) {
         std::cerr << "Error: No se pudo cargar water_door.png" << std::endl;
-    } else {
-        std::cout << "water_door.png cargado correctamente" << std::endl;
     }
-
-    // Cargar texturas de personajes (sprite sheets)
     if (!fireboyTexture.loadFromFile("assets/imagenes/personajes/fireboy_spritesheet.png")) {
         std::cerr << "Error: No se pudo cargar fireboy_spritesheet.png" << std::endl;
-    } else {
-        std::cout << "fireboy_spritesheet.png cargado correctamente" << std::endl;
     }
     if (!watergirlTexture.loadFromFile("assets/imagenes/personajes/watergirl_spritesheet.png")) {
         std::cerr << "Error: No se pudo cargar watergirl_spritesheet.png" << std::endl;
-    } else {
-        std::cout << "watergirl_spritesheet.png cargado correctamente" << std::endl;
     }
-
     // Cargar texturas de obstáculos
     if (!lavaTexture.loadFromFile("assets/imagenes/obstaculos/lava.png")) {
         std::cerr << "Error: No se pudo cargar lava.png" << std::endl;
-    } else {
-        std::cout << "lava.png cargado correctamente" << std::endl;
     }
     if (!waterTexture.loadFromFile("assets/imagenes/obstaculos/water.png")) {
         std::cerr << "Error: No se pudo cargar water.png" << std::endl;
-    } else {
-        std::cout << "water.png cargado correctamente" << std::endl;
     }
     if (!mudTexture.loadFromFile("assets/imagenes/obstaculos/mud.png")) {
         std::cerr << "Error: No se pudo cargar mud.png" << std::endl;
+    }
+    
+    // Cargar textura del botón de pausa
+    if (!pauseButtonTexture.loadFromFile("assets/imagenes/ui/pause_button.png")) {
+        std::cerr << "Advertencia: No se pudo cargar pause_button.png, usando color sólido" << std::endl;
+        // Si no carga, el botón será solo el rectángulo
     } else {
-        std::cout << "mud.png cargado correctamente" << std::endl;
+        std::cout << "pause_button.png cargado correctamente" << std::endl;
+        pauseButtonSprite.setTexture(pauseButtonTexture);
     }
 
-    // Configurar Jugador 1 - Fireboy (WASD)
+    // Configurar Jugador 1 - Fireboy
     player1.setTexture(fireboyTexture);
-    // Asumiendo 4 frames horizontales, cada frame es width/4
     int frameWidth1 = fireboyTexture.getSize().x / 4;
     int frameHeight1 = fireboyTexture.getSize().y;
     player1.setTextureRect(sf::IntRect(0, 0, frameWidth1, frameHeight1));
-    player1.setOrigin(frameWidth1 / 2.0f, frameHeight1 / 2.0f); // Centrar el origen
-    player1.setPosition(150.0f, 375.0f);
-    float player1Scale = 50.0f / frameWidth1; // Ajustar tamaño del jugador
+    player1.setOrigin(frameWidth1 / 2.0f, frameHeight1 / 2.0f);
+    player1.setPosition(currentLevel.getPlayer1StartPos());
+    float player1Scale = 50.0f / frameWidth1;
     player1.setScale(player1Scale, player1Scale);
-    baseScale1 = player1Scale; // Guardar escala base
+    baseScale1 = player1Scale;
 
-    // Configurar Jugador 2 - Watergirl (Flechas)
+    // Configurar Jugador 2 - Watergirl
     player2.setTexture(watergirlTexture);
     int frameWidth2 = watergirlTexture.getSize().x / 4;
     int frameHeight2 = watergirlTexture.getSize().y;
     player2.setTextureRect(sf::IntRect(0, 0, frameWidth2, frameHeight2));
-    player2.setOrigin(frameWidth2 / 2.0f, frameHeight2 / 2.0f); // Centrar el origen
-    player2.setPosition(1000.0f, 375.0f);
-    float player2Scale = 50.0f / frameWidth2; // Ajustar tamaño del jugador
+    player2.setOrigin(frameWidth2 / 2.0f, frameHeight2 / 2.0f);
+    player2.setPosition(currentLevel.getPlayer2StartPos());
+    float player2Scale = 50.0f / frameWidth2;
     player2.setScale(player2Scale, player2Scale);
-    baseScale2 = player2Scale; // Guardar escala base
+    baseScale2 = player2Scale;
 
-    // Diamante 1 - Fuego (usar sprite con textura)
+    // Configurar diamante 1 (fuego)
     diamond1.setTexture(fireDiamondTexture);
-    diamond1.setPosition(300.0f, 400.0f);
-    // Calcular escala basada en el tamaño de la textura para que tenga 50 píxeles
+    diamond1.setPosition(currentLevel.getDiamond1Pos());
     float scale1 = 50.0f / fireDiamondTexture.getSize().x;
     diamond1.setScale(scale1, scale1);
-
-    // Diamante 2 - Agua (usar sprite con textura)
+    
+    // Configurar diamante 2 (agua)
     diamond2.setTexture(waterDiamondTexture);
-    diamond2.setPosition(900.0f, 400.0f);
-    // Calcular escala basada en el tamaño de la textura para que tenga 50 píxeles
+    diamond2.setPosition(currentLevel.getDiamond2Pos());
     float scale2 = 50.0f / waterDiamondTexture.getSize().x;
     diamond2.setScale(scale2, scale2);
+    
+    // Configurar diamante 3 (fuego 2) - NUEVO
+    diamond3.setTexture(fireDiamondTexture);
+    diamond3.setPosition(currentLevel.getDiamond3Pos());
+    diamond3.setScale(scale1, scale1);
+    
+    // Configurar diamante 4 (agua 2) - NUEVO
+    diamond4.setTexture(waterDiamondTexture);
+    diamond4.setPosition(currentLevel.getDiamond4Pos());
+    diamond4.setScale(scale2, scale2);
 
-    // Los obstáculos (lava, agua, lodo) NO se configuran aquí
-    // Se crearán dinámicamente desde las posiciones del nivel
-    // Solo preparar las texturas y escalas
+    // Configurar obstáculos
     lava.setTexture(lavaTexture);
     float lavaScale = 150.0f / lavaTexture.getSize().x;
     lava.setScale(lavaScale, lavaScale);
@@ -148,26 +143,42 @@ Game::Game(int startingLevel) :
     mud.setScale(mudScale, mudScale);
     mud.setOrigin(mudTexture.getSize().x / 2.0f, mudTexture.getSize().y / 2.0f);
 
-    // Puerta 1 - Fuego (usar sprite con textura)
+    // Configurar puertas
     door1.setTexture(fireDoorTexture);
-    door1.setPosition(50.0f, 650.0f);
-    float doorScale1 = 80.0f / fireDoorTexture.getSize().x; // Reducido a 80px
+    door1.setPosition(currentLevel.getDoor1Pos());
+    float doorScale1 = 80.0f / fireDoorTexture.getSize().x;
     door1.setScale(doorScale1, doorScale1);
-    // Hitbox pequeña en el centro del portal (~30x40)
-    door1Hitbox = sf::FloatRect(50.0f + 25.0f, 650.0f + 20.0f, 30.0f, 40.0f);
+    sf::Vector2f door1Pos = currentLevel.getDoor1Pos();
+    door1Hitbox = sf::FloatRect(door1Pos.x + 25.0f, door1Pos.y + 20.0f, 30.0f, 40.0f);
 
-    // Puerta 2 - Agua (usar sprite con textura)
     door2.setTexture(waterDoorTexture);
-    door2.setPosition(1070.0f, 650.0f);
-    float doorScale2 = 80.0f / waterDoorTexture.getSize().x; // Reducido a 80px
+    door2.setPosition(currentLevel.getDoor2Pos());
+    float doorScale2 = 80.0f / waterDoorTexture.getSize().x;
     door2.setScale(doorScale2, doorScale2);
-    // Hitbox pequeña en el centro del portal
-    door2Hitbox = sf::FloatRect(1070.0f + 25.0f, 650.0f + 20.0f, 30.0f, 40.0f);
+    sf::Vector2f door2Pos = currentLevel.getDoor2Pos();
+    door2Hitbox = sf::FloatRect(door2Pos.x + 25.0f, door2Pos.y + 20.0f, 30.0f, 40.0f);
+    
+    // Configurar botón de pausa (esquina superior derecha)
+    pauseButton.setSize(sf::Vector2f(50, 50));
+    pauseButton.setPosition(1130, 10);
+    pauseButton.setFillColor(sf::Color(50, 50, 50, 200));
+    pauseButton.setOutlineColor(sf::Color::White);
+    pauseButton.setOutlineThickness(2);
+    
+    // Configurar sprite del botón de pausa
+    if (pauseButtonTexture.getSize().x > 0) {
+        // Escalar la imagen al tamaño del botón
+        float scaleX = 50.0f / pauseButtonTexture.getSize().x;
+        float scaleY = 50.0f / pauseButtonTexture.getSize().y;
+        pauseButtonSprite.setScale(scaleX, scaleY);
+        pauseButtonSprite.setPosition(1130, 10);
+    }
+    
+    std::cout << "Juego inicializado con menu de pausa" << std::endl;
 }
 
 void Game::run()
 {
-    // Bucle principal
     while (window.isOpen())
     {
         processEvents();
@@ -178,42 +189,62 @@ void Game::run()
 
 void Game::processEvents()
 {
+    // Actualizar posiciones del menú de pausa si está pausado
+    if (isPaused) {
+        pauseMenu.updatePositions(window.getSize());
+    }
+    
     sf::Event event;
     while (window.pollEvent(event))
     {
         if (event.type == sf::Event::Closed)
             window.close();
         
-        // Cambiar de nivel con teclas numéricas
-        if (event.type == sf::Event::KeyPressed) {
-            if (event.key.code == sf::Keyboard::Num1) {
-                currentLevel.changeLevel(1);
-                resetGame();
-            }
-            else if (event.key.code == sf::Keyboard::Num2) {
-                currentLevel.changeLevel(2);
-                resetGame();
-            }
-            // Salto Jugador 1 (W)
-            else if (event.key.code == sf::Keyboard::W) {
-                if (player1OnGround) {
-                    player1VelocityY = jumpForce;
-                    player1OnGround = false;
-                    player1DoubleJumpAvailable = true;
-                } else if (player1DoubleJumpAvailable) {
-                    player1VelocityY = jumpForce;
-                    player1DoubleJumpAvailable = false;
+        if (isPaused) {
+            // Si está en pausa, solo manejar eventos del menú de pausa
+            pauseMenu.handleInput(event);
+        } else {
+            // Juego no pausado
+            if (event.type == sf::Event::KeyPressed) {
+                // Tecla ESC para pausar
+                if (event.key.code == sf::Keyboard::Escape) {
+                    isPaused = true;
+                    pauseMenu.resetSelection();
+                    std::cout << "Juego pausado (ESC)" << std::endl;
+                }
+                // Salto Jugador 1 (W)
+                else if (event.key.code == sf::Keyboard::W) {
+                    if (player1OnGround) {
+                        player1VelocityY = jumpForce;
+                        player1OnGround = false;
+                        player1DoubleJumpAvailable = true;
+                    } else if (player1DoubleJumpAvailable) {
+                        player1VelocityY = jumpForce;
+                        player1DoubleJumpAvailable = false;
+                    }
+                }
+                // Salto Jugador 2 (Up)
+                else if (event.key.code == sf::Keyboard::Up) {
+                    if (player2OnGround) {
+                        player2VelocityY = jumpForce;
+                        player2OnGround = false;
+                        player2DoubleJumpAvailable = true;
+                    } else if (player2DoubleJumpAvailable) {
+                        player2VelocityY = jumpForce;
+                        player2DoubleJumpAvailable = false;
+                    }
                 }
             }
-            // Salto Jugador 2 (Up)
-            else if (event.key.code == sf::Keyboard::Up) {
-                if (player2OnGround) {
-                    player2VelocityY = jumpForce;
-                    player2OnGround = false;
-                    player2DoubleJumpAvailable = true;
-                } else if (player2DoubleJumpAvailable) {
-                    player2VelocityY = jumpForce;
-                    player2DoubleJumpAvailable = false;
+            // Click en botón de pausa
+            else if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x),
+                                         static_cast<float>(event.mouseButton.y));
+                    if (pauseButton.getGlobalBounds().contains(mousePos)) {
+                        isPaused = true;
+                        pauseMenu.resetSelection();
+                        std::cout << "Juego pausado (boton)" << std::endl;
+                    }
                 }
             }
         }
@@ -222,6 +253,27 @@ void Game::processEvents()
 
 void Game::update()
 {
+    if (isPaused) {
+        // Actualizar menú de pausa
+        pauseMenu.update(sf::Mouse::getPosition(window));
+        
+        int selectedOption = pauseMenu.getSelectedOption();
+        if (selectedOption == 0) { // Reanudar
+            isPaused = false;
+            pauseMenu.resetSelection();
+            std::cout << "Reanudando juego..." << std::endl;
+        } else if (selectedOption == 1) { // Reiniciar
+            resetGame();
+            isPaused = false;
+            pauseMenu.resetSelection();
+            std::cout << "Reiniciando nivel..." << std::endl;
+        } else if (selectedOption == 2) { // Salir
+            std::cout << "Saliendo al menu principal..." << std::endl;
+            window.close();
+        }
+        return; // No actualizar el juego si está pausado
+    }
+    
     // Obtener posición del mouse y mostrarla en pantalla
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     mouseCoordText.setString("Mouse: X=" + std::to_string(mousePos.x) + " Y=" + std::to_string(mousePos.y));
@@ -232,53 +284,32 @@ void Game::update()
 
     std::vector<sf::FloatRect> platforms = currentLevel.getPlatforms();
 
-    // === MOVIMIENTO HORIZONTAL Jugador 1 (A/D) ===
+    // Movimiento y colisiones Jugador 1
     sf::Vector2f player1OldPos = player1.getPosition();
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
         player1.move(-speed, 0.0f);
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
         player1.move(speed, 0.0f);
 
-    // Colisión horizontal Jugador 1
-    bool player1HorizontalCollision = false;
     for(const auto& platform : platforms) {
-        sf::FloatRect p1Bounds = player1.getGlobalBounds();
-        if (p1Bounds.intersects(platform)) {
-            // Calcular superposiciones
-            float overlapLeft = (p1Bounds.left + p1Bounds.width) - platform.left;
-            float overlapRight = (platform.left + platform.width) - p1Bounds.left;
-            float overlapTop = (p1Bounds.top + p1Bounds.height) - platform.top;
-            float overlapBottom = (platform.top + platform.height) - p1Bounds.top;
-            
-            // Determinar cual superposición es menor para saber desde dónde viene la colisión
-            float minOverlap = std::min({overlapLeft, overlapRight, overlapTop, overlapBottom});
-            
-            // Solo bloquear si la menor superposición es lateral (left o right)
-            if (minOverlap == overlapLeft || minOverlap == overlapRight) {
-                player1.setPosition(player1OldPos);
-                player1HorizontalCollision = true;
-                break;
-            }
+        if (player1.getGlobalBounds().intersects(platform)) {
+            player1.setPosition(player1OldPos);
+            break;
         }
     }
 
-    // === MOVIMIENTO VERTICAL Jugador 1 ===
     player1OldPos = player1.getPosition();
     player1.move(0.0f, player1VelocityY);
-
-    // Colisión vertical Jugador 1
     player1OnGround = false;
+    
     for(const auto& platform : platforms) {
-        sf::FloatRect p1Bounds = player1.getGlobalBounds();
-        if (p1Bounds.intersects(platform)) {
+        if (player1.getGlobalBounds().intersects(platform)) {
             if (player1VelocityY > 0) {
-                // Cayendo
                 player1.setPosition(player1OldPos);
                 player1VelocityY = 0.0f;
                 player1OnGround = true;
                 player1DoubleJumpAvailable = false;
             } else if (player1VelocityY < 0) {
-                // Subiendo
                 player1.setPosition(player1OldPos);
                 player1VelocityY = 0.0f;
             }
@@ -286,53 +317,32 @@ void Game::update()
         }
     }
 
-    // === MOVIMIENTO HORIZONTAL Jugador 2 (Left/Right) ===
+    // Movimiento y colisiones Jugador 2
     sf::Vector2f player2OldPos = player2.getPosition();
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
         player2.move(-speed, 0.0f);
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
         player2.move(speed, 0.0f);
 
-    // Colisión horizontal Jugador 2
-    bool player2HorizontalCollision = false;
     for(const auto& platform : platforms) {
-        sf::FloatRect p2Bounds = player2.getGlobalBounds();
-        if (p2Bounds.intersects(platform)) {
-            // Calcular superposiciones
-            float overlapLeft = (p2Bounds.left + p2Bounds.width) - platform.left;
-            float overlapRight = (platform.left + platform.width) - p2Bounds.left;
-            float overlapTop = (p2Bounds.top + p2Bounds.height) - platform.top;
-            float overlapBottom = (platform.top + platform.height) - p2Bounds.top;
-            
-            // Determinar cual superposición es menor para saber desde dónde viene la colisión
-            float minOverlap = std::min({overlapLeft, overlapRight, overlapTop, overlapBottom});
-            
-            // Solo bloquear si la menor superposición es lateral (left o right)
-            if (minOverlap == overlapLeft || minOverlap == overlapRight) {
-                player2.setPosition(player2OldPos);
-                player2HorizontalCollision = true;
-                break;
-            }
+        if (player2.getGlobalBounds().intersects(platform)) {
+            player2.setPosition(player2OldPos);
+            break;
         }
     }
 
-    // === MOVIMIENTO VERTICAL Jugador 2 ===
     player2OldPos = player2.getPosition();
     player2.move(0.0f, player2VelocityY);
-
-    // Colisión vertical Jugador 2
     player2OnGround = false;
+    
     for(const auto& platform : platforms) {
-        sf::FloatRect p2Bounds = player2.getGlobalBounds();
-        if (p2Bounds.intersects(platform)) {
+        if (player2.getGlobalBounds().intersects(platform)) {
             if (player2VelocityY > 0) {
-                // Cayendo
                 player2.setPosition(player2OldPos);
                 player2VelocityY = 0.0f;
                 player2OnGround = true;
                 player2DoubleJumpAvailable = false;
             } else if (player2VelocityY < 0) {
-                // Subiendo
                 player2.setPosition(player2OldPos);
                 player2VelocityY = 0.0f;
             }
@@ -340,62 +350,59 @@ void Game::update()
         }
     }
 
-
-    // Detectar colisiones con los diamantes
+    // Colisiones con diamantes - ACTUALIZADO
     if (diamond1Visible && player1.getGlobalBounds().intersects(diamond1.getGlobalBounds())) {
-        diamond1Visible = false; // Ocultar el diamante
+        diamond1Visible = false;
         player1Diamonds++;
+        std::cout << "Fireboy recogió diamante 1!" << std::endl;
     }
     if (diamond2Visible && player2.getGlobalBounds().intersects(diamond2.getGlobalBounds())) {
-        diamond2Visible = false; // Ocultar el diamante
+        diamond2Visible = false;
         player2Diamonds++;
+        std::cout << "Watergirl recogió diamante 1!" << std::endl;
+    }
+    if (diamond3Visible && player1.getGlobalBounds().intersects(diamond3.getGlobalBounds())) {
+        diamond3Visible = false;
+        player1Diamonds++;
+        std::cout << "Fireboy recogió diamante 2!" << std::endl;
+    }
+    if (diamond4Visible && player2.getGlobalBounds().intersects(diamond4.getGlobalBounds())) {
+        diamond4Visible = false;
+        player2Diamonds++;
+        std::cout << "Watergirl recogió diamante 2!" << std::endl;
     }
 
-    // Detectar colisiones con las puertas (usando hitboxes ajustadas)
-    if (player1.getGlobalBounds().intersects(door1Hitbox) && player1Diamonds >= 1) {
-        std::cout << "Fireboy ha ganado!" << std::endl;
-        window.close(); // Fireboy gana
+    // Colisiones con puertas - Ahora necesitan 2 diamantes cada uno
+    if (player1.getGlobalBounds().intersects(door1Hitbox) && player1Diamonds >= 2) {
+        std::cout << "Fireboy ha completado el nivel!" << std::endl;
+        window.close();
     }
-    if (player2.getGlobalBounds().intersects(door2Hitbox) && player2Diamonds >= 1) {
-        std::cout << "Watergirl ha ganado!" << std::endl;
-        window.close(); // Watergirl gana
+    if (player2.getGlobalBounds().intersects(door2Hitbox) && player2Diamonds >= 2) {
+        std::cout << "Watergirl ha completado el nivel!" << std::endl;
+        window.close();
     }
 
-    // Detectar colisiones con obstáculos del nivel
+    // Colisiones con obstáculos
     std::vector<sf::Vector2f> lavaPos = currentLevel.getLavaPositions();
     std::vector<sf::Vector2f> waterPos = currentLevel.getWaterPositions();
     std::vector<sf::Vector2f> mudPos = currentLevel.getMudPositions();
     
-    // Colisiones con lava
     for(const auto& pos : lavaPos) {
-        float hitWidth = 130.0f;
-        float hitHeight = 30.0f;
-        sf::FloatRect hitbox(pos.x - hitWidth/2.0f, pos.y - hitHeight/2.0f, hitWidth, hitHeight);
-        
+        sf::FloatRect hitbox(pos.x - 65.0f, pos.y - 15.0f, 130.0f, 30.0f);
         if (player2.getGlobalBounds().intersects(hitbox)) {
             player2.setPosition(currentLevel.getPlayer2StartPos());
         }
-        // Fireboy puede pasar por la lava
     }
     
-    // Colisiones con agua
     for(const auto& pos : waterPos) {
-        float hitWidth = 130.0f;
-        float hitHeight = 30.0f;
-        sf::FloatRect hitbox(pos.x - hitWidth/2.0f, pos.y - hitHeight/2.0f, hitWidth, hitHeight);
-        
+        sf::FloatRect hitbox(pos.x - 65.0f, pos.y - 15.0f, 130.0f, 30.0f);
         if (player1.getGlobalBounds().intersects(hitbox)) {
             player1.setPosition(currentLevel.getPlayer1StartPos());
         }
-        // Watergirl puede pasar por el agua
     }
     
-    // Colisiones con lodo
     for(const auto& pos : mudPos) {
-        float hitWidth = 130.0f;
-        float hitHeight = 30.0f;
-        sf::FloatRect hitbox(pos.x - hitWidth/2.0f, pos.y - hitHeight/2.0f, hitWidth, hitHeight);
-        
+        sf::FloatRect hitbox(pos.x - 65.0f, pos.y - 15.0f, 130.0f, 30.0f);
         if (player1.getGlobalBounds().intersects(hitbox)) {
             player1.setPosition(currentLevel.getPlayer1StartPos());
         }
@@ -404,7 +411,6 @@ void Game::update()
         }
     }
 
-    // Actualizar animación
     updateAnimation();
 }
 
@@ -413,14 +419,9 @@ void Game::updateAnimation()
     // Actualizar animación si ha pasado suficiente tiempo
     if (animationClock.getElapsedTime().asSeconds() > frameTime) {
         // Determinar si los jugadores están en movimiento y dirección
-        bool player1Moving = sf::Keyboard::isKeyPressed(sf::Keyboard::W) ||
-                            sf::Keyboard::isKeyPressed(sf::Keyboard::S) ||
-                            sf::Keyboard::isKeyPressed(sf::Keyboard::A) ||
+        bool player1Moving = sf::Keyboard::isKeyPressed(sf::Keyboard::A) ||
                             sf::Keyboard::isKeyPressed(sf::Keyboard::D);
-
-        bool player2Moving = sf::Keyboard::isKeyPressed(sf::Keyboard::Up) ||
-                            sf::Keyboard::isKeyPressed(sf::Keyboard::Down) ||
-                            sf::Keyboard::isKeyPressed(sf::Keyboard::Left) ||
+        bool player2Moving = sf::Keyboard::isKeyPressed(sf::Keyboard::Left) ||
                             sf::Keyboard::isKeyPressed(sf::Keyboard::Right);
 
         // Dimensiones de frames para cada jugador
@@ -481,46 +482,54 @@ sf::FloatRect Game::getPlayer2Bounds()
 
 void Game::resetGame()
 {
-    // Reiniciar posiciones de jugadores según el nivel actual
     player1.setPosition(currentLevel.getPlayer1StartPos());
     player2.setPosition(currentLevel.getPlayer2StartPos());
     
-    // Reiniciar diamantes
+    // Reiniciar todos los diamantes
     diamond1.setPosition(currentLevel.getDiamond1Pos());
     diamond2.setPosition(currentLevel.getDiamond2Pos());
+    diamond3.setPosition(currentLevel.getDiamond3Pos());
+    diamond4.setPosition(currentLevel.getDiamond4Pos());
     diamond1Visible = true;
     diamond2Visible = true;
+    diamond3Visible = true;
+    diamond4Visible = true;
     player1Diamonds = 0;
     player2Diamonds = 0;
     
-    // Reiniciar puertas
     door1.setPosition(currentLevel.getDoor1Pos());
     door2.setPosition(currentLevel.getDoor2Pos());
-    // Actualizar hitboxes de puertas - pequeñas en el centro
     door1Hitbox = sf::FloatRect(currentLevel.getDoor1Pos().x + 25.0f, currentLevel.getDoor1Pos().y + 20.0f, 30.0f, 40.0f);
     door2Hitbox = sf::FloatRect(currentLevel.getDoor2Pos().x + 25.0f, currentLevel.getDoor2Pos().y + 20.0f, 30.0f, 40.0f);
     
-    std::cout << "Nivel cambiado y juego reiniciado" << std::endl;
+    player1VelocityY = 0.0f;
+    player2VelocityY = 0.0f;
+    
+    std::cout << "Juego reiniciado" << std::endl;
 }
 
 void Game::render()
 {
     window.clear(sf::Color::Black);
     
-    // Dibujar fondo del nivel
+    // Obtener tamaño de ventana
+    sf::Vector2u windowSize = window.getSize();
+    
     currentLevel.render(window);
     
-    // Dibujar puertas primero (para que estén detrás de los jugadores)
     window.draw(door1);
     window.draw(door2);
     
-    // Dibujar jugadores encima de las puertas
-    window.draw(player1);
-    window.draw(player2);
+    // Dibujar diamantes ANTES de los jugadores
     if (diamond1Visible) window.draw(diamond1);
     if (diamond2Visible) window.draw(diamond2);
+    if (diamond3Visible) window.draw(diamond3);
+    if (diamond4Visible) window.draw(diamond4);
     
-    // Dibujar obstáculos solo si hay posiciones definidas en el nivel
+    // Dibujar jugadores DESPUÉS (por encima de los diamantes)
+    window.draw(player1);
+    window.draw(player2);
+    
     std::vector<sf::Vector2f> lavaPos = currentLevel.getLavaPositions();
     std::vector<sf::Vector2f> waterPos = currentLevel.getWaterPositions();
     std::vector<sf::Vector2f> mudPos = currentLevel.getMudPositions();
@@ -538,8 +547,33 @@ void Game::render()
         window.draw(mud);
     }
     
-    // Dibujar coordenadas del mouse (para desarrollo)
+    // Actualizar posición del texto de coordenadas
+    mouseCoordText.setPosition(10.0f, 10.0f);
     window.draw(mouseCoordText);
+    
+    // Actualizar posición del botón de pausa (siempre en esquina superior derecha)
+    pauseButton.setPosition(windowSize.x - 60.0f, 10.0f);
+    
+    // Si hay textura, dibujar el sprite; si no, solo el botón
+    if (pauseButtonTexture.getSize().x > 0) {
+        pauseButtonSprite.setPosition(windowSize.x - 60.0f, 10.0f);
+        window.draw(pauseButtonSprite);
+    } else {
+        // Fallback: dibujar botón con fondo y texto "| |"
+        window.draw(pauseButton);
+        sf::Text fallbackIcon;
+        fallbackIcon.setFont(font);
+        fallbackIcon.setString("| |");
+        fallbackIcon.setCharacterSize(30);
+        fallbackIcon.setFillColor(sf::Color::White);
+        fallbackIcon.setPosition(windowSize.x - 48.0f, 18.0f);
+        window.draw(fallbackIcon);
+    }
+    
+    // Si está pausado, dibujar menú de pausa encima
+    if (isPaused) {
+        pauseMenu.render(window);
+    }
     
     window.display();
 }

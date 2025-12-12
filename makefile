@@ -5,7 +5,7 @@ CXX := g++
 CXXFLAGS := -std=c++17 -I include
 LDFLAGS := -L lib -lsfml-graphics -lsfml-window -lsfml-system
 TARGET := FuegoYAgua.exe
-SOURCES := src/main.cpp src/Menu.cpp src/LevelSelector.cpp src/Level.cpp src/game.cpp
+SOURCES := src/main.cpp src/Menu.cpp src/LevelSelector.cpp src/PauseMenu.cpp src/Level.cpp src/game.cpp
 
 all: $(TARGET)
 
@@ -44,6 +44,7 @@ info:
 	@echo "  - src/main.cpp"
 	@echo "  - src/Menu.cpp"
 	@echo "  - src/LevelSelector.cpp"
+	@echo "  - src/PauseMenu.cpp"
 	@echo "  - src/Level.cpp"
 	@echo "  - src/game.cpp"
 	@echo ""

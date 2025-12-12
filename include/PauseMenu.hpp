@@ -1,33 +1,30 @@
-#ifndef LEVELSELECTOR_HPP
-#define LEVELSELECTOR_HPP
+#ifndef PAUSEMENU_HPP
+#define PAUSEMENU_HPP
 
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <string>
 
-class LevelSelector {
+class PauseMenu {
 private:
     sf::Font font;
     sf::Text title;
-    std::vector<sf::RectangleShape> levelButtons;
-    std::vector<sf::Text> levelTexts;
-    std::vector<sf::Sprite> levelPreviews;
-    std::vector<sf::Texture> previewTextures;
-    int selectedLevel;
+    std::vector<sf::RectangleShape> buttons;
+    std::vector<sf::Text> buttonTexts;
+    int selectedOption;
     
-    sf::Texture backgroundTexture;
-    sf::Sprite backgroundSprite;
+    sf::RectangleShape overlay;
     
     sf::Texture exitButtonTexture;  // NUEVO
     sf::Sprite exitButtonSprite;    // NUEVO
     
 public:
-    LevelSelector();
+    PauseMenu();
     void updatePositions(const sf::Vector2u& windowSize); // NUEVO
     void handleInput(sf::Event& event);
     void update(const sf::Vector2i& mousePos);
     void render(sf::RenderWindow& window);
-    int getSelectedLevel() const; // 1 = Nivel 1, 2 = Nivel 2, -1 = ninguno
+    int getSelectedOption() const; // 0 = Reanudar, 1 = Reiniciar, 2 = Salir, -1 = ninguno
     void resetSelection();
 };
 

@@ -17,13 +17,35 @@ int main() {
     LevelSelector levelSelector;
     Game* game = nullptr;
     int selectedLevel = 1;
+    
+    bool isFullscreen = false;
 
     // Game loop
     while (window.isOpen()) {
+        // ACTUALIZAR POSICIONES ANTES DE EVENTOS
+        if (currentState == GameState::MENU_PRINCIPAL) {
+            menu.updatePositions(window.getSize());
+        } else if (currentState == GameState::SELECTOR_NIVEL) {
+            levelSelector.updatePositions(window.getSize());
+        }
+        
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
                 window.close();
+            }
+            
+            // F11 para alternar pantalla completa
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::F11) {
+                isFullscreen = !isFullscreen;
+                window.close();
+                if (isFullscreen) {
+                    window.create(sf::VideoMode::getDesktopMode(), "Fuego y Agua", sf::Style::Fullscreen);
+                } else {
+                    window.create(sf::VideoMode(1200, 800), "Fuego y Agua");
+                }
+                window.setFramerateLimit(60);
+                std::cout << "Modo: " << (isFullscreen ? "Pantalla completa" : "Ventana") << std::endl;
             }
 
             if (currentState == GameState::MENU_PRINCIPAL) {
@@ -38,13 +60,11 @@ int main() {
             menu.update(sf::Mouse::getPosition(window));
             
             int selectedOption = menu.getSelectedOption();
-            if (selectedOption == 0) { // COMENZAR
+            if (selectedOption == 0) {
                 std::cout << ">>> COMENZAR presionado <<<" << std::endl;
-                std::cout << ">>> Mostrando selector de niveles... <<<" << std::endl;
                 currentState = GameState::SELECTOR_NIVEL;
                 menu.resetSelection();
-                
-            } else if (selectedOption == 1) { // SALIR
+            } else if (selectedOption == 1) {
                 std::cout << ">>> SALIR presionado <<<" << std::endl;
                 window.close();
             }
@@ -53,20 +73,25 @@ int main() {
             levelSelector.update(sf::Mouse::getPosition(window));
             
             selectedLevel = levelSelector.getSelectedLevel();
-            if (selectedLevel > 0) { // Si se seleccionó un nivel
+            if (selectedLevel == -2) {
+                std::cout << ">>> Volviendo al menú principal <<<" << std::endl;
+                currentState = GameState::MENU_PRINCIPAL;
+                levelSelector.resetSelection();
+            } else if (selectedLevel > 0) {
                 std::cout << ">>> Iniciando nivel " << selectedLevel << " <<<" << std::endl;
-                window.close(); // Cerrar ventana del menú
+                window.close();
                 
-                // Crear y ejecutar el juego con el nivel seleccionado
                 game = new Game(selectedLevel);
                 game->run();
                 
-                // Cuando el juego termina, volver al menú principal
                 delete game;
                 game = nullptr;
                 
-                // Reabrir ventana para el menú
-                window.create(sf::VideoMode(1200, 800), "Fuego y Agua");
+                if (isFullscreen) {
+                    window.create(sf::VideoMode::getDesktopMode(), "Fuego y Agua", sf::Style::Fullscreen);
+                } else {
+                    window.create(sf::VideoMode(1200, 800), "Fuego y Agua");
+                }
                 window.setFramerateLimit(60);
                 currentState = GameState::MENU_PRINCIPAL;
                 levelSelector.resetSelection();

@@ -109,16 +109,19 @@ void Level::setupLevel1() {
     }
     
     // Posiciones iniciales de jugadores - esquina inferior izquierda
-    // Suelo en Y=750, jugadores deben estar encima, no dentro
     player1Start = sf::Vector2f(75.0f, 710.0f);   // Fireboy
     player2Start = sf::Vector2f(125.0f, 710.0f);  // Watergirl
     
-    // Posiciones de diamantes
-    diamond1Pos = sf::Vector2f(350.0f, 654.0f);  // Diamante rojo (fuego)
-    diamond2Pos = sf::Vector2f(695.0f, 654.0f);  // Diamante azul (agua)
+    // Posiciones de diamantes originales
+    diamond1Pos = sf::Vector2f(350.0f, 654.0f);  // Diamante rojo (fuego) 1
+    diamond2Pos = sf::Vector2f(695.0f, 654.0f);  // Diamante azul (agua) 1
     
-    // Posiciones de puertas - sobre la plataforma superior derecha (Y=220)
-    door1Pos = sf::Vector2f(950.0f, 110.0f);   // Puerta de fuego
+    // Posiciones de diamantes adicionales (movidos a la izquierda y más separados)
+    diamond3Pos = sf::Vector2f(165.0f, 450.0f);  // Diamante rojo (fuego) 2 - derecha
+    diamond4Pos = sf::Vector2f(75.0f, 450.0f);   // Diamante azul (agua) 2 - izquierda
+    
+    // Posiciones de puertas
+    door1Pos = sf::Vector2f(950.0f, 110.0f);
     door2Pos = sf::Vector2f(1050.0f, 110.0f);  // Puerta de agua (a la derecha)
     
     // Obstáculos del nivel 1
@@ -141,8 +144,8 @@ void Level::setupLevel1() {
     }
     
     // Plataforma superior - desde pared izquierda hasta X=217
-    for(int x = 50; x <= 150; x += 50) {
-        addBlock("platform", x, 350);
+    for(int x = 50, y = 350; x <= 150; x += 50) {
+        addBlock("platform", x, y);
     }
     
     // Plataforma media - desde X=198 hasta X=330
@@ -167,27 +170,79 @@ void Level::setupLevel2() {
     waterPositions.clear();
     mudPositions.clear();
     
-    // Crear bordes del nivel (igual que nivel 1)
+    // Crear bordes del nivel
     for(int x = 0; x < 24; x++) {
         addBlock("border", x * blockSize, 750);
+    }
+    
+    for(int x = 0; x < 24; x++) {
         addBlock("border", x * blockSize, 0);
     }
+    
     for(int y = 0; y < 16; y++) {
         addBlock("border_vertical", 0, y * blockSize);
+    }
+    
+    for(int y = 0; y < 16; y++) {
         addBlock("border_vertical", 1150, y * blockSize);
     }
     
-    // Posiciones para nivel 2 (diferentes al nivel 1)
-    player1Start = sf::Vector2f(75.0f, 725.0f);
-    player2Start = sf::Vector2f(1075.0f, 725.0f);
+    // Columna central
+    for(int y = 50; y <= 390; y += 50) {
+        addBlock("border_vertical", 575, y);
+    }
     
-    diamond1Pos = sf::Vector2f(400.0f, 600.0f);
-    diamond2Pos = sf::Vector2f(800.0f, 600.0f);
+    // Plataforma izquierda superior
+    for(int x = 50; x <= 350; x += 50) {
+        addBlock("platform", x, 200);
+    }
     
-    door1Pos = sf::Vector2f(100.0f, 680.0f);
-    door2Pos = sf::Vector2f(1050.0f, 680.0f);
+    // Plataforma derecha superior
+    for(int x = 850; x <= 1100; x += 50) {
+        addBlock("platform", x, 195);
+    }
     
-    // Nivel 2 tendrá su propio diseño de plataformas y obstáculos
+    // Cuadrados pequeños
+    addBlock("platform", 425, 435);
+    addBlock("platform", 224, 373);
+    addBlock("platform", 65, 591);
+    addBlock("platform", 344, 678);
+    addBlock("platform", 648, 546);
+    addBlock("platform", 878, 449);
+    addBlock("platform", 1087, 597);
+    addBlock("platform", 625, 287);
+    
+    // Posiciones iniciales
+    player1Start = sf::Vector2f(100.0f, 160.0f);
+    player2Start = sf::Vector2f(150.0f, 160.0f);
+    
+    // Diamantes lado izquierdo
+    diamond1Pos = sf::Vector2f(66.0f, 546.0f);   // Diamante fuego 1 - abajo izquierda
+    diamond2Pos = sf::Vector2f(66.0f, 496.0f);   // Diamante agua 1 - arriba izquierda
+    
+    // Diamantes lado derecho
+    diamond3Pos = sf::Vector2f(1086.0f, 554.0f); // Diamante fuego 2 - abajo derecha
+    diamond4Pos = sf::Vector2f(1086.0f, 504.0f); // Diamante agua 2 - arriba derecha
+    
+    // Puertas
+    door1Pos = sf::Vector2f(941.0f, 85.0f);
+    door2Pos = sf::Vector2f(1041.0f, 85.0f);
+    
+    // Lodo verde - charcos principales
+    for(int x = 100; x <= 1100; x += 150) {
+        mudPositions.push_back(sf::Vector2f(static_cast<float>(x), 760.0f));
+    }
+    
+    // Lodo verde - charcos intermedios
+    mudPositions.push_back(sf::Vector2f(175.0f, 760.0f));
+    mudPositions.push_back(sf::Vector2f(325.0f, 760.0f));
+    mudPositions.push_back(sf::Vector2f(475.0f, 760.0f));
+    mudPositions.push_back(sf::Vector2f(625.0f, 760.0f));
+    mudPositions.push_back(sf::Vector2f(775.0f, 760.0f));
+    mudPositions.push_back(sf::Vector2f(925.0f, 760.0f));
+    mudPositions.push_back(sf::Vector2f(1100.0f, 760.0f));
+    
+    std::cout << "Nivel 2 completo cargado" << std::endl;
 }
 
 void Level::setupLevel3() {
@@ -251,6 +306,8 @@ sf::Vector2f Level::getPlayer1StartPos() const { return player1Start; }
 sf::Vector2f Level::getPlayer2StartPos() const { return player2Start; }
 sf::Vector2f Level::getDiamond1Pos() const { return diamond1Pos; }
 sf::Vector2f Level::getDiamond2Pos() const { return diamond2Pos; }
+sf::Vector2f Level::getDiamond3Pos() const { return diamond3Pos; }
+sf::Vector2f Level::getDiamond4Pos() const { return diamond4Pos; }
 sf::Vector2f Level::getDoor1Pos() const { return door1Pos; }
 sf::Vector2f Level::getDoor2Pos() const { return door2Pos; }
 

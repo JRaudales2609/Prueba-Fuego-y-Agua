@@ -16,8 +16,15 @@ private:
     sf::Texture backgroundTexture;
     sf::Sprite backgroundSprite;
     
+    sf::Texture startButtonTexture;
+    sf::Sprite startButtonSprite;
+    
+    sf::Texture exitButtonTexture;  // NUEVO - Textura del botón salir
+    sf::Sprite exitButtonSprite;    // NUEVO - Sprite del botón salir
+    
 public:
     Menu();
+    void updatePositions(const sf::Vector2u& windowSize); // NUEVO
     void handleInput(sf::Event& event);
     void update(const sf::Vector2i& mousePos);
     void render(sf::RenderWindow& window);

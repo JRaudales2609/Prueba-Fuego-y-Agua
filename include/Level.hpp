@@ -25,6 +25,8 @@ public:
     sf::Vector2f getPlayer2StartPos() const;
     sf::Vector2f getDiamond1Pos() const;
     sf::Vector2f getDiamond2Pos() const;
+    sf::Vector2f getDiamond3Pos() const;  // NUEVO
+    sf::Vector2f getDiamond4Pos() const;  // NUEVO
     sf::Vector2f getDoor1Pos() const;
     sf::Vector2f getDoor2Pos() const;
     
@@ -54,6 +56,8 @@ private:
     sf::Vector2f player2Start;
     sf::Vector2f diamond1Pos;
     sf::Vector2f diamond2Pos;
+    sf::Vector2f diamond3Pos;  // NUEVO
+    sf::Vector2f diamond4Pos;  // NUEVO
     sf::Vector2f door1Pos;
     sf::Vector2f door2Pos;
     
